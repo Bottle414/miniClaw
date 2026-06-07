@@ -1,13 +1,21 @@
 import dotenv from "dotenv"
 import OpenAI from "openai"
+import readline from "node:readline/promises"
+import { stdin as input, stdout as output } from "node:process"
+
 import { getDotenvConfig } from "./utils/dotenv"
-import { useTool } from "./utils/tool"
+import { messageHandler } from "./utils/message"
 
 dotenv.config(getDotenvConfig())
 
 const openai = new OpenAI({
 	baseURL: "https://api.deepseek.com",
 	apiKey: process.env.DEEPSEEK_API_KEY
+})
+
+const rl = readline.createInterface({
+	input,
+	output
 })
 
 const tools = [
@@ -30,21 +38,49 @@ const tools = [
 	}
 ]
 
-let messages = [{ role: "user", content: "帮我查一下上海的天气" }]
+const messages: any[] = []
 
-async function main() {
+async function sendMessage() {
 	const completion = await openai.chat.completions.create({
 		messages,
-		model: "deepseek-v4-pro",
-		thinking: { type: "enabled" },
-		tools,
-		reasoning_effort: "high",
-		stream: false
+		model: "deepseek-chat",
+		tools
 	} as any)
 
-	const results = useTool(completion.choices[0].message.tool_calls as any)
+	const message = completion.choices[0].message as any
 
-	console.log(JSON.stringify(completion.choices[0].message.tool_calls), completion.choices[0].message.content, results)
+	messages.push(message)
+
+	if (message.tool_calls?.length) {
+		const results = messageHandler(message)
+
+		if (results?.length) {
+			messages.push(...results)
+
+			return sendMessage()
+		}
+	}
+
+	console.log("\nAssistant:")
+	console.log(message.content)
+}
+
+async function main() {
+	while (true) {
+		const userInput = await rl.question("\nYou: ")
+
+		if (userInput === "exit") {
+			rl.close()
+			process.exit(0)
+		}
+
+		messages.push({
+			role: "user",
+			content: userInput
+		})
+
+		await sendMessage()
+	}
 }
 
 main()
