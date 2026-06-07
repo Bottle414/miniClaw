@@ -1,12 +1,26 @@
 {
   "name": "mini-claw",
   "version": "1.0.0",
-  "description": "mini OpenClaw",
-  "main": "index.js",
-  "scripts": {},
+  "private": true,
+  "description": "mini OpenClaw - Monorepo",
+  "scripts": {
+    "dev:runtime": "pnpm --filter @mini-claw/runtime dev",
+    "dev:web": "pnpm --filter @mini-claw/web dev",
+    "dev": "pnpm run dev:runtime",
+    "build:runtime": "pnpm --filter @mini-claw/runtime build",
+    "build:web": "pnpm --filter @mini-claw/web build",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "clean": "pnpm -r exec rm -rf node_modules dist"
+  },
   "author": "Bottle414",
   "license": "ISC",
   "devDependencies": {
-    "@fission-ai/openspec": "^1.4.0"
+    "@fission-ai/openspec": "^1.4.0",
+    "typescript": "^6.0.3"
+  },
+  "packageManager": "pnpm@10.0.0",
+  "engines": {
+    "node": ">=24.0.0"
   }
 }

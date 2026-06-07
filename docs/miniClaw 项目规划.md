@@ -28,13 +28,34 @@ https://api-docs.deepseek.com/zh-cn/
 
 # 三、架构设计
 
+项目采用 monorepo 结构。项目结构：
+miniClaw/
+├── apps/
+│ ├── runtime/ # Agent 运行时
+│ │ ├── index.ts
+│ │ ├── package.json # @mini-claw/runtime
+│ │ ├── tsconfig.json
+│ │ └── nodemon.json
+│ └── web/ # Web UI  
+│ └── ... # @mini-claw/web (Vite + React)
+├── packages/ # 共享包目录（预留）
+├── package.json # 根配置
+├── pnpm-workspace.yaml # workspace 配置
+└── tsconfig.base.json # 共享 TS 配置
+
 # 四、技术选型
 
 Node 环境：Node 24
 
+包管理器：pnpm
+
 编程语言：TS
 
+热重载：nodemon
+
 UI 框架：React
+
+脚手架：Vite
 
 文档：本地保留 docs + 飞书链接
 
