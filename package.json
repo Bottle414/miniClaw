@@ -1,0 +1,12 @@
+{
+  "name": "mini-claw",
+  "version": "1.0.0",
+  "description": "mini OpenClaw",
+  "main": "index.js",
+  "scripts": {},
+  "author": "Bottle414",
+  "license": "ISC",
+  "devDependencies": {
+    "@fission-ai/openspec": "^1.4.0"
+  }
+}
