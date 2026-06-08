@@ -1,4 +1,5 @@
 export type MessageType = "function"
+export type Role = "user" | "assistant" | "system"
 
 /**
  * 工具调用
