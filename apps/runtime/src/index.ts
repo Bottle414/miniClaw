@@ -5,6 +5,8 @@ import { stdin as input, stdout as output } from "node:process"
 
 import { getDotenvConfig } from "./utils/dotenv"
 import { messageHandler } from "./utils/message"
+import { toolHandler } from "./tools"
+import { transformTools } from "./adaptor/deepseek"
 
 dotenv.config(getDotenvConfig())
 
@@ -18,25 +20,8 @@ const rl = readline.createInterface({
 	output
 })
 
-const tools = [
-	{
-		type: "function",
-		function: {
-			name: "get_weather",
-			description: "获取天气",
-			parameters: {
-				type: "object",
-				properties: {
-					city: {
-						type: "string",
-						description: "城市名称"
-					}
-				},
-				required: ["city"]
-			}
-		}
-	}
-]
+const tools = toolHandler.getToolDefinitions()
+const deepseekTools = transformTools(tools)
 
 const messages: any[] = []
 
@@ -44,7 +29,7 @@ async function sendMessage() {
 	const completion = await openai.chat.completions.create({
 		messages,
 		model: "deepseek-chat",
-		tools
+		tools: deepseekTools
 	} as any)
 
 	const message = completion.choices[0].message as any

@@ -23,7 +23,8 @@ import type {
 	DeepSeekChatCompletionResponse,
 	DeepSeekMessage,
 	DeepSeekTool,
-	DeepSeekToolChoice
+	DeepSeekToolChoice,
+	DeepSeekToolCallResponse
 } from "../../types/providers/deepseek"
 
 /**
@@ -131,11 +132,11 @@ function transformToolCall(tc: LLMToolCall): { id: string; type: "function"; fun
  * 转换工具列表
  * 统一格式: { name, description, parameters? } -> DeepSeek 格式: { type: "function", function: { name, description, parameters? } }
  */
-function transformTools(tools: LLMTool[]): DeepSeekTool[] {
+export function transformTools(tools: LLMTool[]): DeepSeekTool[] {
 	return tools.map((tool) => ({
 		type: "function",
 		function: {
-			name: tool.name,
+			name: tool.name.replace(/\./g, "-"),
 			description: tool.description,
 			parameters: tool.parameters as Record<string, unknown>
 		}
@@ -150,6 +151,20 @@ function transformToolChoice(choice: LLMToolChoice): DeepSeekToolChoice {
 		return choice as DeepSeekToolChoice
 	}
 	return { type: "function", function: { name: choice.function.name } }
+}
+
+/**
+ * 解析 DeepSeek 返回的 tool_calls 为内部 LLMToolCall 格式
+ * DeepSeek 格式: { id, type, function: { name, arguments } }
+ * 内部格式: { id, name, arguments }
+ * 同时将工具名中的 "-" 还原为 "."（与 transformTools 中 "." → "-" 对应）
+ */
+export function parseToolCalls(toolCalls: DeepSeekToolCallResponse[]): LLMToolCall[] {
+	return toolCalls.map((tc) => ({
+		id: tc.id,
+		name: tc.function.name.replace(/-/g, "."),
+		arguments: tc.function.arguments
+	}))
 }
 
 /**
