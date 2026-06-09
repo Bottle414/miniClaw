@@ -1,11 +1,10 @@
-import { ToolMap } from "../const/tool"
-import { ToolCalls } from "../types/message"
+import { ToolMap } from "../tools"
+import { LLMToolCall } from "../types/llm"
 
-export function useTool(tools: ToolCalls) {
+export function useTool(tools: LLMToolCall[]) {
 	return tools.map((tool) => {
 		console.log(tool)
-		const { id } = tool || {}
-		const { arguments: toolParams, name } = tool?.function || {}
+		const { id, name, arguments: toolParams } = tool || {}
 		const result = ToolMap[name as keyof typeof ToolMap](JSON.parse(toolParams || "{}"))
 		return {
 			role: "tool",

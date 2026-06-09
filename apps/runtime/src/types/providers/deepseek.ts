@@ -24,12 +24,7 @@ export type DeepSeekToolType = "function"
 export type DeepSeekToolChoiceMode = "none" | "auto" | "required"
 
 /** 停止原因 */
-export type DeepSeekFinishReason =
-	| "stop"
-	| "length"
-	| "content_filter"
-	| "tool_calls"
-	| "insufficient_system_resource"
+export type DeepSeekFinishReason = "stop" | "length" | "content_filter" | "tool_calls" | "insufficient_system_resource"
 
 /** 对话补全对象类型 */
 export type DeepSeekChatCompletionObject = "chat.completion"
@@ -67,11 +62,7 @@ export interface DeepSeekToolMessage {
 }
 
 /** 消息类型联合 */
-export type DeepSeekMessage =
-	| DeepSeekSystemMessage
-	| DeepSeekUserMessage
-	| DeepSeekAssistantMessage
-	| DeepSeekToolMessage
+export type DeepSeekMessage = DeepSeekSystemMessage | DeepSeekUserMessage | DeepSeekAssistantMessage | DeepSeekToolMessage
 
 // ============== Request Types ==============
 
