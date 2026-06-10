@@ -13,3 +13,6 @@ export * from "./providers/deepseek"
 
 // 配置类型
 export * from "./config"
+
+// ReAct 循环类型
+export * from "./react"

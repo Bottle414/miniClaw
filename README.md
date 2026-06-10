@@ -14,6 +14,158 @@ miniClaw 是一个用于理解 Agent 运行模式的学习项目，旨在深入�
 - **Session System** - 当前任务、消息、工具调用管理
 - **可视化界面** - 面向用户的 Web UI
 
+## ReAct 循环
+
+miniClaw 实现了 ReAct (Reasoning + Acting) 模式作为 Agent 的核心运行机制。
+
+### ReAct 循环阶段
+
+```
+Think (思考) → Act (行动) → Observe (观察) → Decide (决策)
+```
+
+1. **Think**: LLM 思考下一步应该做什么
+2. **Act**: LLM 决定调用工具或提供最终答案
+3. **Observe**: 系统执行工具并收集结果
+4. **Decide**: 系统评估是否终止循环或继续
+
+### 主要特性
+
+- ✅ **显式推理过程**: 每个阶段都有明确的状态跟踪
+- ✅ **多级终止逻辑**: 支持最终答案、迭代限制、错误处理等终止条件
+- ✅ **结构化观察**: 工具执行结果以结构化方式记录，便于调试
+- ✅ **不可变状态**: 状态管理采用不可变模式，易于追踪和测试
+- ✅ **向后兼容**: 保留旧循环模式作为回退选项
+
+### 环境变量配置
+
+```env
+# ReAct 循环控制
+USE_REACT_LOOP=true          # 启用/禁用 ReAct 循环（默认：true）
+
+# 调试选项
+DEBUG_REACT=true             # 启用 ReAct 调试信息输出
+```
+
+### 示例输出
+
+#### 场景 1: 简单工具调用
+
+```
+You: 上海天气
+
+使用 ReAct 循环模式
+
+Assistant:
+[Think] 用户询问上海天气，需要调用天气工具
+[Act] 调用 weather.getWeather({ city: "上海" })
+[Observe] 返回结果: "sunny"
+[Decide] 已获得答案，准备响应
+
+上海今天是晴天，天气不错！
+```
+
+#### 场景 2: 多步推理
+
+```
+You: 北京和上海哪里的天气更好？
+
+使用 ReAct 循环模式
+
+--- 迭代 1 ---
+[Think] 需要获取两个城市的天气进行比较
+[Act] 调用 weather.getWeather({ city: "北京" })
+[Observe] 返回结果: "cloudy"
+[Decide] 还需要上海的天气信息，继续
+
+--- 迭代 2 ---
+[Think] 已获取北京天气，现在需要上海天气
+[Act] 调用 weather.getWeather({ city: "上海" })
+[Observe] 返回结果: "sunny"
+[Decide] 已获得足够信息，准备比较
+
+--- 最终答案 ---
+上海今天是晴天，北京是多云。从天气情况看，上海今天的天气更好一些。
+```
+
+#### 场景 3: 直接回答（无需工具）
+
+```
+You: 你好
+
+使用 ReAct 循环模式
+
+[Think] 用户只是打招呼，不需要工具
+[Act] 直接回复
+[Decide] 无需工具调用，直接响应
+
+你好！我是 miniClaw，很高兴为你服务。有什么我可以帮助你的吗？
+```
+
+详细架构设计请参考 [架构设计文档](docs/架构设计.md)。
+
+### 调试与状态检查
+
+#### 启用调试模式
+
+```env
+DEBUG_REACT=true
+```
+
+调试模式下，系统会在每次循环结束后输出详细的状态信息：
+
+```
+--- ReAct 调试信息 ---
+迭代次数: 2
+终止原因: final_answer
+行动次数: 2
+观察次数: 2
+-------------------
+```
+
+#### 状态检查
+
+ReAct 状态包含以下关键信息：
+
+```typescript
+ReActState {
+  iteration: number              // 当前迭代次数
+  phase: 'thinking' | 'acting' | 'observing' | 'deciding'
+  messages: LLMMessage[]         // 完整消息历史
+  actionHistory: ActionRecord[]  // 行动记录
+  observationHistory: ObservationRecord[]  // 观察记录
+  shouldTerminate: boolean       // 是否应终止
+  terminationReason?: 'final_answer' | 'iteration_limit' | 'error' | 'empty_response'
+}
+```
+
+#### 常见问题排查
+
+**问题: 循环未终止**
+- 检查 `maxIterations` 配置（默认：10）
+- 确认 LLM 是否正确判断终止条件
+
+**问题: 工具执行失败**
+- 检查 `observationHistory` 中的 `error` 字段
+- 确认工具参数格式是否正确
+
+**问题: 意外的迭代次数**
+- 启用 `DEBUG_REACT=true` 查看每次迭代的详细信息
+- 检查 `actionHistory` 了解工具调用序列
+
+#### 切换回旧循环
+
+如需使用旧的递归循环模式：
+
+```env
+USE_REACT_LOOP=false
+```
+
+旧模式的特点：
+- 简单的递归调用
+- 无显式阶段跟踪
+- 适合简单场景
+
 ### 进阶功能（规划中）
 
 - 多模型切换

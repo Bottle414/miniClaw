@@ -8,6 +8,7 @@ import { toolHandler } from "./tools"
 import { messageHandler } from "./utils/message"
 import type { LLMMessage } from "./types/llm"
 import { getDotenvConfig } from "./utils/dotenv"
+import { executeReActLoop } from "./react/loop"
 
 // 加载环境变量
 dotenv.config(getDotenvConfig())
@@ -25,6 +26,9 @@ const rl = readline.createInterface({
 	output
 })
 
+// 功能开关：是否使用 ReAct 循环
+const USE_REACT_LOOP = process.env.USE_REACT_LOOP !== "false" // 默认启用
+
 // 初始化消息历史（包含系统提示）
 const messages: LLMMessage[] = [
 	// 先不传系统提示，减少 token 消耗
@@ -35,9 +39,9 @@ const messages: LLMMessage[] = [
 ]
 
 /**
- * 发送消息到 LLM
+ * 发送消息到 LLM（旧循环 - 作为回退）
  */
-async function sendMessage() {
+async function sendMessageLegacy() {
 	// 获取工具定义
 	const tools = toolHandler.getToolDefinitions()
 
@@ -80,7 +84,7 @@ async function sendMessage() {
 			messages.push(...toolMessages)
 
 			// 递归调用以获取最终回复
-			return sendMessage()
+			return sendMessageLegacy()
 		}
 	}
 
@@ -92,9 +96,52 @@ async function sendMessage() {
 }
 
 /**
+ * 发送消息到 LLM（新 ReAct 循环）
+ */
+async function sendMessageReAct(userInput: string) {
+	// 执行 ReAct 循环
+	const result = await executeReActLoop({
+		provider,
+		config,
+		userInput,
+		initialMessages: messages
+	})
+
+	// 处理结果
+	if (result.error) {
+		console.error("\nError:", result.error.message)
+		return
+	}
+
+	// 输出响应
+	if (result.response) {
+		console.log("\nAssistant:")
+		console.log(result.response)
+	}
+
+	// 更新全局消息历史（用于下次对话）
+	messages.length = 0
+	messages.push(...result.state.messages)
+
+	// 调试信息
+	if (process.env.DEBUG_REACT === "true") {
+		console.log("\n--- ReAct 调试信息 ---")
+		console.log(`迭代次数: ${result.state.iteration}`)
+		console.log(`终止原因: ${result.state.terminationReason}`)
+		console.log(`行动次数: ${result.state.actionHistory.length}`)
+		console.log(`观察次数: ${result.state.observationHistory.length}`)
+		console.log("-------------------\n")
+	}
+}
+
+/**
  * 主循环
  */
 async function main() {
+	console.log(
+		`\n使用 ${USE_REACT_LOOP ? "ReAct 循环" : "旧循环（回退）"} 模式\n`
+	)
+
 	while (true) {
 		const userInput = await rl.question("\nYou: ")
 
@@ -103,13 +150,17 @@ async function main() {
 			process.exit(0)
 		}
 
-		// 添加用户消息
-		messages.push({
-			role: "user",
-			content: [{ type: "text", text: userInput }]
-		})
-
-		await sendMessage()
+		if (USE_REACT_LOOP) {
+			// 使用 ReAct 循环
+			await sendMessageReAct(userInput)
+		} else {
+			// 使用旧循环（回退）
+			messages.push({
+				role: "user",
+				content: [{ type: "text", text: userInput }]
+			})
+			await sendMessageLegacy()
+		}
 	}
 }
 
