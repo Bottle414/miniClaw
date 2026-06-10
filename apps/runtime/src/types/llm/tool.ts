@@ -40,8 +40,11 @@ export interface LLMNamedToolChoice {
  * 工具定义
  */
 export interface LLMTool {
+	/** 工具名称 */
 	name: string
+	/** 工具描述 */
 	description: string
+	/** 工具函数参数定义 */
 	parameters?: LLMFunctionParameters
 }
 

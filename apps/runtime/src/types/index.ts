@@ -10,3 +10,6 @@ export * from "./providers"
 
 // DeepSeek 提供商类型
 export * from "./providers/deepseek"
+
+// 配置类型
+export * from "./config"

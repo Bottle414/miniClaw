@@ -29,7 +29,7 @@ export interface LLMUsage {
  */
 export interface LLMResponseMessage {
 	/** 消息内容 */
-	content: Segment[]
+	content: Segment[] | null
 	/** 消息角色 */
 	role: "assistant"
 	/** 工具调用列表 */
@@ -48,4 +48,6 @@ export interface LLMResponse {
 	model?: string
 	/** Token 使用情况 */
 	usage?: LLMUsage
+	/** 响应消息 */
+	message?: LLMResponseMessage
 }

@@ -3,6 +3,7 @@
  * 定义统一类型与提供商特定类型之间的转换规则
  */
 
+import { Config } from "../config"
 import type { LLMRequest, LLMResponse } from "../llm"
 
 // ============== Adapter Interface ==============
@@ -51,3 +52,13 @@ export type TransformRequest<T> = (request: LLMRequest) => T
  * 响应转换函数类型
  */
 export type TransformResponse<T> = (response: T) => LLMResponse
+
+/**
+ * 提供商适配器类型
+ */
+export interface Provider {
+	/** 初始化配置 */
+	init(config: Config): void
+	/** 发送消息 */
+	chat(req: LLMRequest): Promise<LLMResponse>
+}

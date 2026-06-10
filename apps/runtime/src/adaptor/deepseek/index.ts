@@ -21,6 +21,7 @@ import type {
 import type {
 	DeepSeekChatCompletionRequest,
 	DeepSeekChatCompletionResponse,
+	DeepSeekAssistantMessage,
 	DeepSeekMessage,
 	DeepSeekTool,
 	DeepSeekToolChoice,
@@ -50,11 +51,19 @@ export const deepseekAdapter: LLMAdapter<DeepSeekChatCompletionRequest, DeepSeek
 	 * 将 DeepSeek 响应转换为统一响应
 	 */
 	transformResponse(response: DeepSeekChatCompletionResponse): LLMResponse {
+		const choice = response.choices[0]
 		return {
 			id: response.id,
 			created: response.created,
 			model: response.model,
-			usage: response.usage ? transformUsage(response.usage) : undefined
+			usage: response.usage ? transformUsage(response.usage) : undefined,
+			message: choice
+				? {
+						content: choice.message.content ? [{ type: "text", text: choice.message.content }] : null,
+						role: "assistant",
+						toolCalls: choice.message.tool_calls ? parseToolCalls(choice.message.tool_calls) : undefined
+					}
+				: undefined
 		}
 	}
 }
@@ -95,19 +104,13 @@ function transformUserMessage(msg: LLMUserMessage): DeepSeekMessage {
 }
 
 function transformAssistantMessage(msg: LLMAssistantMessage): DeepSeekMessage {
-	const result: DeepSeekMessage = {
+	const result: DeepSeekAssistantMessage = {
 		role: "assistant",
 		content: msg.content ? segmentsToString(msg.content) : null
-		/**
-         * content 里面包含了 tool_calls，类似
-         * {
-            index: 0,
-            id: 'call_00_24UehuNz54TRQn87krzP5930',
-            type: 'function',
-            function: { name: 'get_weather', arguments: '{"city": "上海"}' }
-            }
-            考虑读取到就存入历史消息，不再转为 deepseek 格式
-         */
+	}
+	// 保留 tool_calls 以满足 API 要求：tool 消息前必须有带 tool_calls 的 assistant 消息
+	if (msg.toolCalls && msg.toolCalls.length > 0) {
+		result.tool_calls = msg.toolCalls.map(transformToolCall)
 	}
 	return result
 }

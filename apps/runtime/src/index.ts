@@ -1,55 +1,99 @@
 import dotenv from "dotenv"
-import OpenAI from "openai"
 import readline from "node:readline/promises"
 import { stdin as input, stdout as output } from "node:process"
 
-import { getDotenvConfig } from "./utils/dotenv"
-import { messageHandler } from "./utils/message"
+import { createConfig } from "./utils/config"
+import { DeepSeekProvider } from "./provider"
 import { toolHandler } from "./tools"
-import { transformTools } from "./adaptor/deepseek"
+import { messageHandler } from "./utils/message"
+import type { LLMMessage } from "./types/llm"
+import { getDotenvConfig } from "./utils/dotenv"
 
+// 加载环境变量
 dotenv.config(getDotenvConfig())
 
-const openai = new OpenAI({
-	baseURL: "https://api.deepseek.com",
-	apiKey: process.env.DEEPSEEK_API_KEY
-})
+// 创建配置
+const config = createConfig(process.env)
 
+// 创建并初始化 Provider
+const provider = DeepSeekProvider()
+provider.init(config)
+
+// 创建 readline 接口
 const rl = readline.createInterface({
 	input,
 	output
 })
 
-const tools = toolHandler.getToolDefinitions()
-const deepseekTools = transformTools(tools)
+// 初始化消息历史（包含系统提示）
+const messages: LLMMessage[] = [
+	// 先不传系统提示，减少 token 消耗
+	// {
+	// 	role: "system",
+	// 	content: [{ type: "text", text: config.systemPrompt }]
+	// }
+]
 
-const messages: any[] = []
-
+/**
+ * 发送消息到 LLM
+ */
 async function sendMessage() {
-	const completion = await openai.chat.completions.create({
+	// 获取工具定义
+	const tools = toolHandler.getToolDefinitions()
+
+	// 构造请求
+	const response = await provider.chat({
 		messages,
-		model: "deepseek-chat",
-		tools: deepseekTools
-	} as any)
+		model: config.model,
+		tools
+	})
 
-	const message = completion.choices[0].message as any
+	// 获取响应消息
+	const { message } = response
 
+	if (!message) {
+		console.log("\nAssistant: (无响应)")
+		return
+	}
+
+	// 将助手消息添加到历史
 	messages.push(message)
 
-	if (message.tool_calls?.length) {
-		const results = messageHandler(message)
+	// 处理工具调用
+	if (message.toolCalls && message.toolCalls.length > 0) {
+		console.log("\nAssistant: 调用工具...")
 
-		if (results?.length) {
-			messages.push(...results)
+		// 使用 messageHandler 处理工具调用
+		const toolMessages = messageHandler({
+			tool_calls: message.toolCalls.map((tc) => ({
+				id: tc.id,
+				type: "function" as const,
+				function: {
+					name: tc.name,
+					arguments: tc.arguments
+				}
+			}))
+		})
 
+		if (toolMessages && toolMessages.length > 0) {
+			// 添加工具消息到历史
+			messages.push(...toolMessages)
+
+			// 递归调用以获取最终回复
 			return sendMessage()
 		}
 	}
 
-	console.log("\nAssistant:")
-	console.log(message.content)
+	// 输出文本回复
+	if (message.content) {
+		console.log("\nAssistant:")
+		console.log(message.content.map((s) => s.text).join(""))
+	}
 }
 
+/**
+ * 主循环
+ */
 async function main() {
 	while (true) {
 		const userInput = await rl.question("\nYou: ")
@@ -59,9 +103,10 @@ async function main() {
 			process.exit(0)
 		}
 
+		// 添加用户消息
 		messages.push({
 			role: "user",
-			content: userInput
+			content: [{ type: "text", text: userInput }]
 		})
 
 		await sendMessage()

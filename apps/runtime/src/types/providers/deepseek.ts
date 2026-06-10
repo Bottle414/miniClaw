@@ -52,6 +52,7 @@ export interface DeepSeekAssistantMessage {
 	name?: string
 	prefix?: boolean
 	reasoning_content?: string | null
+	tool_calls?: DeepSeekToolCallResponse[]
 }
 
 /** Tool 消息 */
