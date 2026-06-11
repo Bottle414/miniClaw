@@ -1,0 +1,15 @@
+{
+  "eval_id": 3,
+  "eval_name": "time-getCurrentTime",
+  "expectations": [
+    { "text": "Tool name follows module.function format (lowercase module, camelCase function)", "passed": true, "evidence": "Name is 'time.getCurrentTime' - lowercase module 'time', camelCase function 'getCurrentTime'" },
+    { "text": "Definition uses 'satisfies LLMTool' type constraint", "passed": true, "evidence": "Line: '} satisfies LLMTool,' present" },
+    { "text": "Executor signature is (params: Record<string, unknown>): string", "passed": true, "evidence": "Line: 'executor: (params: Record<string, unknown>): string =>'" },
+    { "text": "Params are type-cast inside executor with 'params as { ... }'", "passed": true, "evidence": "Line: 'const { timezone } = params as { timezone?: string }'" },
+    { "text": "Required params are listed in required array and exist in properties", "passed": true, "evidence": "required: [], valid - timezone is optional" },
+    { "text": "Optional param (timezone) has default value in executor", "passed": true, "evidence": "Uses 'timezone || Intl.DateTimeFormat().resolvedOptions().timeZone' and 'timezone || \"local\"' as fallbacks" },
+    { "text": "Registration code includes toolHandler.register() call", "passed": true, "evidence": "Line: 'toolHandler.register(timeGetCurrentTime.definition, timeGetCurrentTime.executor)'" },
+    { "text": "Import includes LLMTool type from '../types/llm'", "passed": true, "evidence": "Line: 'import type { LLMTool } from \"../types/llm\"'" },
+    { "text": "Variable name follows PascalCase module+Function concatenation", "passed": true, "evidence": "Variable is 'timeGetCurrentTime' (time + GetCurrentTime)" }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "eval_id": 1,
+  "eval_name": "fs-listDir",
+  "expectations": [
+    { "text": "Tool name follows module.function format (lowercase module, camelCase function)", "passed": true, "evidence": "Name is 'fs.listDir' - lowercase module 'fs', camelCase function 'listDir'" },
+    { "text": "Definition uses 'satisfies LLMTool' type constraint", "passed": true, "evidence": "Line: '} satisfies LLMTool,' present" },
+    { "text": "Executor signature is (params: Record<string, unknown>): string", "passed": true, "evidence": "Line: 'executor: (params: Record<string, unknown>): string =>'" },
+    { "text": "Params are type-cast inside executor with 'params as { ... }'", "passed": true, "evidence": "Line: 'const { path } = params as { path: string }'" },
+    { "text": "Required params are listed in required array and exist in properties", "passed": true, "evidence": "required: ['path'], and 'path' exists in properties" },
+    { "text": "Registration code includes toolHandler.register() call", "passed": true, "evidence": "Line: 'toolHandler.register(fsListDir.definition, fsListDir.executor)'" },
+    { "text": "Import includes LLMTool type from '../types/llm'", "passed": true, "evidence": "Line: 'import type { LLMTool } from \"../types/llm\"'" },
+    { "text": "Variable name follows PascalCase module+Function concatenation", "passed": true, "evidence": "Variable is 'fsListDir' (fs + ListDir)" }
+  ]
+}

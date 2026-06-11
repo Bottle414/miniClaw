@@ -1,0 +1,16 @@
+{
+  "eval_id": 2,
+  "eval_name": "db-query",
+  "prompt": "我想给 miniClaw 加一个工具，能查询数据库。需要传入 SQL 查询语句，还可以选择性地指定数据库名称",
+  "assertions": [
+    { "text": "Tool name follows module.function format (lowercase module, camelCase function)", "type": "naming-convention" },
+    { "text": "Definition uses 'satisfies LLMTool' type constraint", "type": "satisfies-llm-tool" },
+    { "text": "Executor signature is (params: Record<string, unknown>): string", "type": "executor-signature" },
+    { "text": "Params are type-cast inside executor with 'params as { ... }'", "type": "param-type-cast" },
+    { "text": "Required params are listed in required array and exist in properties", "type": "required-params-match" },
+    { "text": "Optional param (database) has default value in executor", "type": "optional-param-default" },
+    { "text": "Registration code includes toolHandler.register() call", "type": "registration-code" },
+    { "text": "Import includes LLMTool type from '../types/llm'", "type": "correct-import" },
+    { "text": "Variable name follows PascalCase module+Function concatenation", "type": "variable-naming" }
+  ]
+}

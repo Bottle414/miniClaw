@@ -1,0 +1,55 @@
+{
+  "skill_name": "miniclaw-tool-gen",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "帮我创建一个文件系统工具，能列出指定目录下的文件和文件夹",
+      "expected_output": "A tool file at apps/runtime/src/tools/fs.ts with fsListDir tool definition (name: fs.listDir) and executor, plus registration in tools/index.ts",
+      "files": [],
+      "assertions": [
+        { "text": "Tool name follows module.function format (lowercase module, camelCase function)", "type": "naming-convention" },
+        { "text": "Definition uses 'satisfies LLMTool' type constraint", "type": "satisfies-llm-tool" },
+        { "text": "Executor signature is (params: Record<string, unknown>): string", "type": "executor-signature" },
+        { "text": "Params are type-cast inside executor with 'params as { ... }'", "type": "param-type-cast" },
+        { "text": "Required params are listed in required array and exist in properties", "type": "required-params-match" },
+        { "text": "Registration code includes toolHandler.register() call", "type": "registration-code" },
+        { "text": "Import includes LLMTool type from '../types/llm'", "type": "correct-import" },
+        { "text": "Variable name follows PascalCase module+Function concatenation", "type": "variable-naming" }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "我想给 miniClaw 加一个工具，能查询数据库。需要传入 SQL 查询语句，还可以选择性地指定数据库名称",
+      "expected_output": "A tool file with db.query definition (required: sql, optional: database) and executor, plus registration in tools/index.ts",
+      "files": [],
+      "assertions": [
+        { "text": "Tool name follows module.function format (lowercase module, camelCase function)", "type": "naming-convention" },
+        { "text": "Definition uses 'satisfies LLMTool' type constraint", "type": "satisfies-llm-tool" },
+        { "text": "Executor signature is (params: Record<string, unknown>): string", "type": "executor-signature" },
+        { "text": "Params are type-cast inside executor with 'params as { ... }'", "type": "param-type-cast" },
+        { "text": "Required params are listed in required array and exist in properties", "type": "required-params-match" },
+        { "text": "Optional param (database) has default value in executor", "type": "optional-param-default" },
+        { "text": "Registration code includes toolHandler.register() call", "type": "registration-code" },
+        { "text": "Import includes LLMTool type from '../types/llm'", "type": "correct-import" },
+        { "text": "Variable name follows PascalCase module+Function concatenation", "type": "variable-naming" }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "创建一个时间工具，获取当前时间，支持指定时区（可选参数）",
+      "expected_output": "A tool file with time.getCurrentTime definition (optional: timezone) and executor, plus registration in tools/index.ts",
+      "files": [],
+      "assertions": [
+        { "text": "Tool name follows module.function format (lowercase module, camelCase function)", "type": "naming-convention" },
+        { "text": "Definition uses 'satisfies LLMTool' type constraint", "type": "satisfies-llm-tool" },
+        { "text": "Executor signature is (params: Record<string, unknown>): string", "type": "executor-signature" },
+        { "text": "Params are type-cast inside executor with 'params as { ... }'", "type": "param-type-cast" },
+        { "text": "Required params are listed in required array and exist in properties", "type": "required-params-match" },
+        { "text": "Optional param (timezone) has default value in executor", "type": "optional-param-default" },
+        { "text": "Registration code includes toolHandler.register() call", "type": "registration-code" },
+        { "text": "Import includes LLMTool type from '../types/llm'", "type": "correct-import" },
+        { "text": "Variable name follows PascalCase module+Function concatenation", "type": "variable-naming" }
+      ]
+    }
+  ]
+}

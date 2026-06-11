@@ -1,0 +1,15 @@
+{
+  "eval_id": 1,
+  "eval_name": "fs-listDir",
+  "prompt": "帮我创建一个文件系统工具，能列出指定目录下的文件和文件夹",
+  "assertions": [
+    { "text": "Tool name follows module.function format (lowercase module, camelCase function)", "type": "naming-convention" },
+    { "text": "Definition uses 'satisfies LLMTool' type constraint", "type": "satisfies-llm-tool" },
+    { "text": "Executor signature is (params: Record<string, unknown>): string", "type": "executor-signature" },
+    { "text": "Params are type-cast inside executor with 'params as { ... }'", "type": "param-type-cast" },
+    { "text": "Required params are listed in required array and exist in properties", "type": "required-params-match" },
+    { "text": "Registration code includes toolHandler.register() call", "type": "registration-code" },
+    { "text": "Import includes LLMTool type from '../types/llm'", "type": "correct-import" },
+    { "text": "Variable name follows PascalCase module+Function concatenation", "type": "variable-naming" }
+  ]
+}

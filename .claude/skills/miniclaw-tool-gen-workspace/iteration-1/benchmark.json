@@ -1,0 +1,83 @@
+{
+  "skill_name": "miniclaw-tool-gen",
+  "iteration": 1,
+  "timestamp": "2026-06-11T00:00:00Z",
+  "configurations": [
+    {
+      "name": "with_skill",
+      "evals": [
+        {
+          "eval_name": "fs-listDir",
+          "pass_rate": 1.0,
+          "total_assertions": 8,
+          "passed_assertions": 8,
+          "time_seconds": 163.7,
+          "tokens": 0
+        },
+        {
+          "eval_name": "db-query",
+          "pass_rate": 1.0,
+          "total_assertions": 9,
+          "passed_assertions": 9,
+          "time_seconds": 155.5,
+          "tokens": 0
+        },
+        {
+          "eval_name": "time-getCurrentTime",
+          "pass_rate": 1.0,
+          "total_assertions": 9,
+          "passed_assertions": 9,
+          "time_seconds": 163.1,
+          "tokens": 0
+        }
+      ],
+      "avg_pass_rate": 1.0,
+      "mean_time_seconds": 160.8,
+      "mean_tokens": 0
+    },
+    {
+      "name": "without_skill",
+      "evals": [
+        {
+          "eval_name": "fs-listDir",
+          "pass_rate": 1.0,
+          "total_assertions": 8,
+          "passed_assertions": 8,
+          "time_seconds": 196.5,
+          "tokens": 0
+        },
+        {
+          "eval_name": "db-query",
+          "pass_rate": 0.889,
+          "total_assertions": 9,
+          "passed_assertions": 8,
+          "time_seconds": 155.4,
+          "tokens": 0
+        },
+        {
+          "eval_name": "time-getCurrentTime",
+          "pass_rate": 1.0,
+          "total_assertions": 9,
+          "passed_assertions": 9,
+          "time_seconds": 177.9,
+          "tokens": 0
+        }
+      ],
+      "avg_pass_rate": 0.963,
+      "mean_time_seconds": 176.6,
+      "mean_tokens": 0
+    }
+  ],
+  "delta": {
+    "pass_rate": 0.037,
+    "time_seconds": -15.8,
+    "tokens": 0
+  },
+  "analyst_notes": [
+    "with_skill achieved 100% pass rate across all 3 evals (26/26 assertions), vs 96.3% for without_skill (25/26).",
+    "The only failure was db-query without_skill on optional-param-default: the optional 'database' parameter had no default value in the executor.",
+    "with_skill was faster on average (160.8s vs 176.6s), likely because the skill provided a clear template that reduced exploration time.",
+    "The skill's guidance on optional parameter defaults is the key differentiator — it explicitly instructs providing defaults for optional params.",
+    "Both configurations correctly followed naming conventions, type constraints, and registration patterns, suggesting the miniClaw tool pattern is intuitive enough that even without a skill, models can follow it from existing examples."
+  ]
+}

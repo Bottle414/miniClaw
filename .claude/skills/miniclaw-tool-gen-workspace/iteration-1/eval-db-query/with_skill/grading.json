@@ -1,0 +1,15 @@
+{
+  "eval_id": 2,
+  "eval_name": "db-query",
+  "expectations": [
+    { "text": "Tool name follows module.function format (lowercase module, camelCase function)", "passed": true, "evidence": "Name is 'db.query' - lowercase module 'db', camelCase function 'query'" },
+    { "text": "Definition uses 'satisfies LLMTool' type constraint", "passed": true, "evidence": "Line: '} satisfies LLMTool,' present" },
+    { "text": "Executor signature is (params: Record<string, unknown>): string", "passed": true, "evidence": "Line: 'executor: (params: Record<string, unknown>): string =>'" },
+    { "text": "Params are type-cast inside executor with 'params as { ... }'", "passed": true, "evidence": "Line: 'const { sql, database } = params as { sql: string; database?: string }'" },
+    { "text": "Required params are listed in required array and exist in properties", "passed": true, "evidence": "required: ['sql'], 'sql' exists in properties" },
+    { "text": "Optional param (database) has default value in executor", "passed": true, "evidence": "Uses 'database: database || \"default\"' as fallback in JSON.stringify" },
+    { "text": "Registration code includes toolHandler.register() call", "passed": true, "evidence": "Line: 'toolHandler.register(dbQuery.definition, dbQuery.executor)'" },
+    { "text": "Import includes LLMTool type from '../types/llm'", "passed": true, "evidence": "Line: 'import type { LLMTool } from \"../types/llm\"'" },
+    { "text": "Variable name follows PascalCase module+Function concatenation", "passed": true, "evidence": "Variable is 'dbQuery' (db + Query)" }
+  ]
+}

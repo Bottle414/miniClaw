@@ -1,0 +1,16 @@
+{
+  "eval_id": 3,
+  "eval_name": "time-getCurrentTime",
+  "prompt": "创建一个时间工具，获取当前时间，支持指定时区（可选参数）",
+  "assertions": [
+    { "text": "Tool name follows module.function format (lowercase module, camelCase function)", "type": "naming-convention" },
+    { "text": "Definition uses 'satisfies LLMTool' type constraint", "type": "satisfies-llm-tool" },
+    { "text": "Executor signature is (params: Record<string, unknown>): string", "type": "executor-signature" },
+    { "text": "Params are type-cast inside executor with 'params as { ... }'", "type": "param-type-cast" },
+    { "text": "Required params are listed in required array and exist in properties", "type": "required-params-match" },
+    { "text": "Optional param (timezone) has default value in executor", "type": "optional-param-default" },
+    { "text": "Registration code includes toolHandler.register() call", "type": "registration-code" },
+    { "text": "Import includes LLMTool type from '../types/llm'", "type": "correct-import" },
+    { "text": "Variable name follows PascalCase module+Function concatenation", "type": "variable-naming" }
+  ]
+}
