@@ -29,6 +29,9 @@ export type DeepSeekFinishReason = "stop" | "length" | "content_filter" | "tool_
 /** 对话补全对象类型 */
 export type DeepSeekChatCompletionObject = "chat.completion"
 
+/** 流式对话补全对象类型 */
+export type DeepSeekChatCompletionChunkObject = "chat.completion.chunk"
+
 // ============== Message Types ==============
 
 /** System 消息 */
@@ -191,5 +194,33 @@ export interface DeepSeekChatCompletionResponse {
 	model: string
 	system_fingerprint: string
 	object: DeepSeekChatCompletionObject
+	usage?: DeepSeekUsage
+}
+
+// ============== Streaming Response Types ==============
+
+/** 流式增量消息 */
+export interface DeepSeekChatCompletionDelta {
+	content?: string | null
+	reasoning_content?: string | null
+	role?: "assistant"
+	tool_calls?: DeepSeekToolCallResponse[]
+}
+
+/** 流式对话补全选择项 */
+export interface DeepSeekChatCompletionChunkChoice {
+	delta: DeepSeekChatCompletionDelta
+	finish_reason: DeepSeekFinishReason | null
+	index: number
+}
+
+/** 流式对话补全 chunk */
+export interface DeepSeekChatCompletionChunk {
+	id: string
+	choices: DeepSeekChatCompletionChunkChoice[]
+	created: number
+	model: string
+	system_fingerprint: string
+	object: DeepSeekChatCompletionChunkObject
 	usage?: DeepSeekUsage
 }

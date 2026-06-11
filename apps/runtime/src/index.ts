@@ -5,8 +5,9 @@ import { stdin as input, stdout as output } from "node:process"
 import { createConfig } from "./utils/config"
 import { DeepSeekProvider } from "./provider"
 import { toolHandler } from "./tools"
-import { messageHandler } from "./utils/message"
+import { messageHandler, createStreamMerger } from "./utils/message"
 import type { LLMMessage } from "./types/llm"
+import type { RuntimeEvent } from "./types/event"
 import { getDotenvConfig } from "./utils/dotenv"
 import { executeReActLoop } from "./react/loop"
 
@@ -103,6 +104,75 @@ async function sendMessageLegacy() {
 }
 
 /**
+ * 流式发送消息到 LLM（旧循环 - 流式版本）
+ */
+async function sendMessageLegacyStream() {
+	// 获取工具定义
+	const tools = toolHandler.getToolDefinitions()
+
+	// 创建流式合并器
+	const merger = createStreamMerger()
+
+	// 流式请求
+	console.log("\nAssistant: ")
+
+	for await (const event of provider.chatStream({
+		messages,
+		model: config.model,
+		tools
+	})) {
+		switch (event.type) {
+			case "text-delta":
+				// 直接输出文本增量
+				process.stdout.write(event.delta)
+				break
+			case "tool-call-start":
+				console.log(`\n[调用工具: ${event.toolName}]`)
+				break
+			case "error":
+				console.error("\nError:", event.error.message)
+				return
+		}
+
+		// 推送到合并器
+		merger.push(event)
+	}
+
+	// 获取完整消息
+	const message = merger.getMessage()
+	if (!message) {
+		console.log("\n(流式响应未完成)")
+		return
+	}
+
+	// 将助手消息添加到历史
+	messages.push(message)
+
+	// 处理工具调用
+	if (message.toolCalls && message.toolCalls.length > 0) {
+		// 使用 messageHandler 处理工具调用
+		const toolMessages = messageHandler({
+			tool_calls: message.toolCalls.map((tc) => ({
+				id: tc.id,
+				type: "function" as const,
+				function: {
+					name: tc.name,
+					arguments: tc.arguments
+				}
+			}))
+		})
+
+		if (toolMessages && toolMessages.length > 0) {
+			// 添加工具消息到历史
+			messages.push(...toolMessages)
+
+			// 递归调用以获取最终回复
+			return sendMessageLegacyStream()
+		}
+	}
+}
+
+/**
  * 发送消息到 LLM（新 ReAct 循环）
  */
 async function sendMessageReAct(userInput: string) {
@@ -145,7 +215,8 @@ async function sendMessageReAct(userInput: string) {
  * 主循环
  */
 async function main() {
-	console.log(`\n使用 ${USE_REACT_LOOP ? "ReAct 循环" : "旧循环（回退）"} 模式\n`)
+	const streamMode = config.stream
+	console.log(`\n使用 ${USE_REACT_LOOP ? "ReAct 循环" : "旧循环（回退）"} 模式${streamMode ? " [流式]" : ""}\n`)
 
 	while (true) {
 		const userInput = await rl.question("\nYou: ")
@@ -164,7 +235,11 @@ async function main() {
 				role: "user",
 				content: userInput
 			})
-			await sendMessageLegacy()
+			if (streamMode) {
+				await sendMessageLegacyStream()
+			} else {
+				await sendMessageLegacy()
+			}
 		}
 	}
 }

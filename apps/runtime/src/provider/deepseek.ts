@@ -5,6 +5,7 @@
 import OpenAI from "openai"
 import type { LLMRequest, LLMResponse } from "../types/llm"
 import type { Provider } from "../types/providers"
+import type { RuntimeEvent } from "../types/event"
 import type { Config } from "../types/config"
 import { deepseekAdapter } from "../adaptor/deepseek"
 
@@ -53,7 +54,7 @@ export function DeepSeekProvider(): Provider {
 					model: deepseekRequest.model,
 					tools: deepseekRequest.tools as any,
 					tool_choice: deepseekRequest.tool_choice as any,
-					stream: config.stream || false
+					stream: false
 				})
 
 				// 转换响应
@@ -70,6 +71,51 @@ export function DeepSeekProvider(): Provider {
 					throw new Error(`DeepSeek API 调用失败: ${error.message}`)
 				}
 				throw error
+			}
+		},
+
+		/**
+		 * 流式发送聊天请求
+		 * @param req 统一 LLM 请求
+		 * @returns RuntimeEvent 异步迭代器
+		 */
+		async *chatStream(req: LLMRequest): AsyncIterable<RuntimeEvent> {
+			if (!client) {
+				yield { type: "error", error: new Error("Provider not initialized") }
+				return
+			}
+
+			if (!config) {
+				yield { type: "error", error: new Error("Provider not initialized") }
+				return
+			}
+
+			try {
+				// 转换请求
+				const deepseekRequest = deepseekAdapter.transformRequest(req)
+
+				// 调用流式 API
+				const stream = await client.chat.completions.create({
+					messages: deepseekRequest.messages as any,
+					model: deepseekRequest.model,
+					tools: deepseekRequest.tools as any,
+					tool_choice: deepseekRequest.tool_choice as any,
+					stream: true
+				})
+
+				// 逐 chunk 转换并 yield
+				for await (const chunk of stream) {
+					const result = deepseekAdapter.transformStreamChunk?.(chunk)
+					if (result) {
+						const events = Array.isArray(result) ? result : [result]
+						for (const e of events) yield e
+					}
+				}
+			} catch (error) {
+				yield {
+					type: "error",
+					error: error instanceof Error ? error : new Error(String(error))
+				}
 			}
 		}
 	}

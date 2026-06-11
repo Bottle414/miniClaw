@@ -35,8 +35,8 @@ export function createConfig(env: NodeJS.ProcessEnv): Config {
 		apiKey: env.API_KEY!,
 		model: env.DEEPSEEK_MODEL || "deepseek-chat",
 		// soulPrompt: getSoulPrompt(),
-		userPrompt: ""
-		// stream: true
+		userPrompt: "",
+		stream: true
 	}
 
 	return config

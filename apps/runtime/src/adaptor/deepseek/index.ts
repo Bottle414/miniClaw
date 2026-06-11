@@ -24,8 +24,10 @@ import type {
 	DeepSeekMessage,
 	DeepSeekTool,
 	DeepSeekToolChoice,
-	DeepSeekToolCallResponse
+	DeepSeekToolCallResponse,
+	DeepSeekChatCompletionChunk
 } from "../../types/providers/deepseek"
+import type { RuntimeEvent } from "../../types/event"
 
 /**
  * DeepSeek 适配器实现
@@ -64,6 +66,73 @@ export const deepseekAdapter: LLMAdapter<DeepSeekChatCompletionRequest, DeepSeek
 					}
 				: undefined
 		}
+	},
+
+	/**
+	 * 将 DeepSeek 流式 chunk 转换为 Runtime Event
+	 * 单个 chunk 可能产出多个事件（如同时包含文本增量和工具调用开始）
+	 */
+	transformStreamChunk(chunk: unknown): RuntimeEvent | RuntimeEvent[] | null {
+		const dsChunk = chunk as DeepSeekChatCompletionChunk
+		const choice = dsChunk.choices?.[0]
+		if (!choice) return null
+
+		const { delta, finish_reason } = choice
+
+		// 完成事件
+		if (finish_reason) {
+			return {
+				type: "finish",
+				reason: finish_reason,
+				usage: dsChunk.usage ? transformUsage(dsChunk.usage) : undefined
+			}
+		}
+
+		const events: RuntimeEvent[] = []
+
+		console.log("文字--------------------------------:")
+
+		console.log(delta.content)
+
+		// 文本增量
+		if (delta.content) {
+			events.push({ type: "text-delta", delta: delta.content })
+		}
+
+		console.log("--------------------------------------------------------->")
+
+		console.log("工具调用--------------------------------:")
+		console.log(delta.tool_calls)
+
+		console.log("--------------------------------------------------------->")
+
+		// 工具调用增量
+		if (delta.tool_calls) {
+			for (const tc of delta.tool_calls) {
+				// 首个 chunk 包含 id 和 function.name
+				if (tc.id && tc.function?.name) {
+					events.push({
+						type: "tool-call-start",
+						toolCallId: tc.id,
+						toolName: tc.function.name.replace(/-/g, ".")
+					})
+				}
+
+				// 参数增量
+				if (tc.function?.arguments) {
+					events.push({
+						type: "tool-call-delta",
+						toolCallId: tc.id ?? "",
+						argumentsDelta: tc.function.arguments
+					})
+				}
+			}
+		}
+
+		// 仅 role 声明的首帧跳过
+		if (events.length === 0) return null
+
+		return events.length === 1 ? events[0] : events
 	}
 }
 
@@ -165,7 +234,7 @@ export function parseToolCalls(toolCalls: DeepSeekToolCallResponse[]): LLMToolCa
 /**
  * 转换使用情况
  */
-function transformUsage(usage: NonNullable<DeepSeekChatCompletionResponse["usage"]>): LLMUsage {
+function transformUsage(usage: NonNullable<DeepSeekChatCompletionResponse["usage"] | DeepSeekChatCompletionChunk["usage"]>): LLMUsage {
 	return {
 		promptTokens: usage.prompt_tokens,
 		completionTokens: usage.completion_tokens,
