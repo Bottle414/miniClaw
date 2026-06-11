@@ -3,7 +3,7 @@
  * 与具体 LLM 提供商无关的抽象响应类型
  */
 
-import type { LLMToolCall, Segment } from "./message"
+import type { LLMToolCall } from "./message"
 
 // ============== Possible Values ==============
 
@@ -29,7 +29,7 @@ export interface LLMUsage {
  */
 export interface LLMResponseMessage {
 	/** 消息内容 */
-	content: Segment[] | null
+	content: string | null
 	/** 消息角色 */
 	role: "assistant"
 	/** 工具调用列表 */

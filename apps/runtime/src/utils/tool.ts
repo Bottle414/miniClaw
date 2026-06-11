@@ -8,7 +8,7 @@ export function useTool(tools: LLMToolCall[]): LLMToolMessage[] {
 		return {
 			role: "tool",
 			toolCallId: id,
-			content: [{ type: "text", text: result }]
+			content: result
 		}
 	})
 }

@@ -5,7 +5,7 @@
 
 import type { Config } from "../types/config"
 import { getSystemPrompt } from "../prompts/system"
-import { getSoulPrompt } from "../prompts/soul"
+// import { getSoulPrompt } from "../prompts/soul"
 
 /**
  * 从环境变量创建完整配置
@@ -34,7 +34,7 @@ export function createConfig(env: NodeJS.ProcessEnv): Config {
 		baseURL: env.DEEPSEEK_BASE_URL || "https://api.deepseek.com",
 		apiKey: env.API_KEY!,
 		model: env.DEEPSEEK_MODEL || "deepseek-chat",
-		soulPrompt: getSoulPrompt(),
+		// soulPrompt: getSoulPrompt(),
 		userPrompt: ""
 		// stream: true
 	}

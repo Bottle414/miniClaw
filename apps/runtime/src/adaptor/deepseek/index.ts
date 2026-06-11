@@ -15,8 +15,7 @@ import type {
 	LLMTool,
 	LLMToolChoice,
 	LLMUsage,
-	LLMToolCall,
-	Segment
+	LLMToolCall
 } from "../../types/llm"
 import type {
 	DeepSeekChatCompletionRequest,
@@ -59,7 +58,7 @@ export const deepseekAdapter: LLMAdapter<DeepSeekChatCompletionRequest, DeepSeek
 			usage: response.usage ? transformUsage(response.usage) : undefined,
 			message: choice
 				? {
-						content: choice.message.content ? [{ type: "text", text: choice.message.content }] : null,
+						content: choice.message.content ?? null,
 						role: "assistant",
 						toolCalls: choice.message.tool_calls ? parseToolCalls(choice.message.tool_calls) : undefined
 					}
@@ -69,13 +68,6 @@ export const deepseekAdapter: LLMAdapter<DeepSeekChatCompletionRequest, DeepSeek
 }
 
 // ============== Internal Transformers ==============
-
-/**
- * 将 Segment[] 转换为字符串
- */
-function segmentsToString(segments: Segment[]): string {
-	return segments.map((s) => s.text).join("")
-}
 
 /**
  * 转换消息列表
@@ -96,17 +88,17 @@ function transformMessages(messages: LLMMessage[]): DeepSeekMessage[] {
 }
 
 function transformSystemMessage(msg: LLMSystemMessage): DeepSeekMessage {
-	return { role: "system", content: segmentsToString(msg.content) }
+	return { role: "system", content: msg.content }
 }
 
 function transformUserMessage(msg: LLMUserMessage): DeepSeekMessage {
-	return { role: "user", content: segmentsToString(msg.content) }
+	return { role: "user", content: msg.content }
 }
 
 function transformAssistantMessage(msg: LLMAssistantMessage): DeepSeekMessage {
 	const result: DeepSeekAssistantMessage = {
 		role: "assistant",
-		content: msg.content ? segmentsToString(msg.content) : null
+		content: msg.content ?? null
 	}
 	// 保留 tool_calls 以满足 API 要求：tool 消息前必须有带 tool_calls 的 assistant 消息
 	if (msg.toolCalls && msg.toolCalls.length > 0) {
@@ -116,7 +108,7 @@ function transformAssistantMessage(msg: LLMAssistantMessage): DeepSeekMessage {
 }
 
 function transformToolMessage(msg: LLMToolMessage): DeepSeekMessage {
-	return { role: "tool", content: segmentsToString(msg.content), tool_call_id: msg.toolCallId }
+	return { role: "tool", content: msg.content, tool_call_id: msg.toolCallId }
 }
 
 /**

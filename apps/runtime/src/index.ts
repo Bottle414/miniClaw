@@ -34,14 +34,14 @@ const messages: LLMMessage[] = [
 	// 先不传系统提示，减少 token 消耗
 	// {
 	// 	role: "system",
-	// 	content: [{ type: "text", text: config.systemPrompt }]
+	// 	content: config.systemPrompt
 	// }
 ]
 
 if (config.soulPrompt) {
 	messages.push({
 		role: "system",
-		content: [{ type: "text", text: config.soulPrompt }]
+		content: config.soulPrompt
 	})
 }
 
@@ -98,7 +98,7 @@ async function sendMessageLegacy() {
 	// 输出文本回复
 	if (message.content) {
 		console.log("\nAssistant:")
-		console.log(message.content.map((s) => s.text).join(""))
+		console.log(message.content)
 	}
 }
 
@@ -162,7 +162,7 @@ async function main() {
 			// 使用旧循环（回退）
 			messages.push({
 				role: "user",
-				content: [{ type: "text", text: userInput }]
+				content: userInput
 			})
 			await sendMessageLegacy()
 		}

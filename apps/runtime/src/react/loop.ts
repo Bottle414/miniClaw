@@ -5,29 +5,11 @@
  */
 
 import type { Provider } from "../types/providers"
-import type {
-	LLMMessage,
-	LLMUserMessage,
-	LLMAssistantMessage,
-	LLMToolMessage
-} from "../types/llm"
+import type { LLMMessage, LLMUserMessage, LLMAssistantMessage, LLMToolMessage } from "../types/llm"
 import type { ReActState, ActionRecord, ObservationRecord } from "../types/react"
 import type { Config } from "../types/config"
-import {
-	createInitialState,
-	updateState,
-	addMessage,
-	addAction,
-	addObservation,
-	incrementIteration,
-	setPhase,
-	markTermination
-} from "./state"
-import {
-	shouldTerminate,
-	checkFinalAnswer,
-	createErrorTermination
-} from "./terminator"
+import { createInitialState, updateState, addMessage, addAction, addObservation, incrementIteration, setPhase, markTermination } from "./state"
+import { shouldTerminate, checkFinalAnswer, createErrorTermination } from "./terminator"
 import { toolHandler } from "../tools"
 
 /**
@@ -61,9 +43,7 @@ export interface ReActLoopResult {
  *
  * 主编排函数，驱动 Think → Act → Observe → Decide 循环
  */
-export async function executeReActLoop(
-	loopConfig: ReActLoopConfig
-): Promise<ReActLoopResult> {
+export async function executeReActLoop(loopConfig: ReActLoopConfig): Promise<ReActLoopResult> {
 	const { provider, config, userInput, initialMessages = [] } = loopConfig
 
 	// 初始化状态
@@ -77,7 +57,7 @@ export async function executeReActLoop(
 	// 添加用户消息
 	const userMessage: LLMUserMessage = {
 		role: "user",
-		content: [{ type: "text", text: userInput }]
+		content: userInput
 	}
 	state = addMessage(state, userMessage)
 
@@ -92,11 +72,7 @@ export async function executeReActLoop(
 			state = actResult.state
 
 			// 检查是否应该终止（最终答案或空响应）
-			const terminationCheck = shouldTerminate(
-				state,
-				{ maxIterations: config.maxIterations ?? 10 },
-				actResult.assistantMessage
-			)
+			const terminationCheck = shouldTerminate(state, { maxIterations: config.maxIterations ?? 10 }, actResult.assistantMessage)
 
 			if (terminationCheck.shouldTerminate) {
 				state = markTermination(state, terminationCheck.reason)
@@ -118,15 +94,11 @@ export async function executeReActLoop(
 		}
 
 		// 返回结果
-		const lastMessage = state.messages[state.messages.length - 1] as
-			| LLMAssistantMessage
-			| undefined
+		const lastMessage = state.messages[state.messages.length - 1] as LLMAssistantMessage | undefined
 
 		return {
 			state,
-			response: lastMessage?.content
-				?.map((s) => s.text)
-				.join("")
+			response: lastMessage?.content ?? undefined
 		}
 	} catch (error) {
 		return {
@@ -141,11 +113,7 @@ export async function executeReActLoop(
  *
  * 准备发送消息到 LLM
  */
-async function executeThinkPhase(
-	state: ReActState,
-	provider: Provider,
-	config: Config
-): Promise<ReActState> {
+async function executeThinkPhase(state: ReActState, provider: Provider, config: Config): Promise<ReActState> {
 	// 设置阶段为 thinking
 	let newState = setPhase(state, "thinking")
 
@@ -197,8 +165,7 @@ async function executeActPhase(
 	let newState = addMessage(state, message)
 
 	// 检查是否有工具调用
-	const hasToolCalls =
-		message.toolCalls !== undefined && message.toolCalls.length > 0
+	const hasToolCalls = message.toolCalls !== undefined && message.toolCalls.length > 0
 
 	return {
 		state: newState,
@@ -213,10 +180,7 @@ async function executeActPhase(
  *
  * 执行工具并记录观察结果
  */
-async function executeObservePhase(
-	state: ReActState,
-	toolCalls: NonNullable<LLMAssistantMessage["toolCalls"]>
-): Promise<ReActState> {
+async function executeObservePhase(state: ReActState, toolCalls: NonNullable<LLMAssistantMessage["toolCalls"]>): Promise<ReActState> {
 	// 设置阶段为 observing
 	let newState = setPhase(state, "observing")
 
@@ -273,7 +237,7 @@ async function executeObservePhase(
 		const toolMessage: LLMToolMessage = {
 			role: "tool",
 			toolCallId: id,
-			content: [{ type: "text", text: result }]
+			content: result
 		}
 		toolMessages.push(toolMessage)
 	}
@@ -291,10 +255,7 @@ async function executeObservePhase(
  *
  * 检查终止条件并决定是否继续
  */
-function executeDecidePhase(
-	state: ReActState,
-	config: Config
-): ReActState {
+function executeDecidePhase(state: ReActState, config: Config): ReActState {
 	// 设置阶段为 deciding
 	let newState = setPhase(state, "deciding")
 

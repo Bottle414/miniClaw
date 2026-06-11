@@ -8,16 +8,6 @@
 /** 消息角色 */
 export type LLMRole = "system" | "user" | "assistant" | "tool"
 
-/**
- * 消息碎片
- */
-export type Segment = TextSegment
-
-export interface TextSegment {
-	type: "text"
-	text: string
-}
-
 // ============== Message Types ==============
 
 /**
@@ -27,7 +17,7 @@ export interface LLMSystemMessage {
 	/** 消息角色 */
 	role: "system"
 	/** 消息内容 */
-	content: Segment[]
+	content: string
 }
 
 /**
@@ -37,7 +27,7 @@ export interface LLMUserMessage {
 	/** 消息角色 */
 	role: "user"
 	/** 消息内容 */
-	content: Segment[]
+	content: string
 }
 
 /**
@@ -59,7 +49,7 @@ export interface LLMAssistantMessage {
 	/** 消息角色 */
 	role: "assistant"
 	/** 消息内容 */
-	content: Segment[] | null
+	content: string | null
 	/** 工具调用列表 */
 	toolCalls?: LLMToolCall[]
 }
@@ -69,7 +59,7 @@ export interface LLMAssistantMessage {
  */
 export interface LLMToolMessage {
 	/** 消息内容 */
-	content: Segment[]
+	content: string
 	/** 消息角色 */
 	role: "tool"
 	/** 对应的工具调用 ID */
