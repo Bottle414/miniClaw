@@ -52,7 +52,8 @@ export function DeepSeekProvider(): Provider {
 					messages: deepseekRequest.messages as any,
 					model: deepseekRequest.model,
 					tools: deepseekRequest.tools as any,
-					tool_choice: deepseekRequest.tool_choice as any
+					tool_choice: deepseekRequest.tool_choice as any,
+					stream: config.stream || false
 				})
 
 				// 转换响应

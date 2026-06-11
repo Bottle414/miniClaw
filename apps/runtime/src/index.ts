@@ -38,6 +38,13 @@ const messages: LLMMessage[] = [
 	// }
 ]
 
+if (config.soulPrompt) {
+	messages.push({
+		role: "system",
+		content: [{ type: "text", text: config.soulPrompt }]
+	})
+}
+
 /**
  * 发送消息到 LLM（旧循环 - 作为回退）
  */
@@ -138,9 +145,7 @@ async function sendMessageReAct(userInput: string) {
  * 主循环
  */
 async function main() {
-	console.log(
-		`\n使用 ${USE_REACT_LOOP ? "ReAct 循环" : "旧循环（回退）"} 模式\n`
-	)
+	console.log(`\n使用 ${USE_REACT_LOOP ? "ReAct 循环" : "旧循环（回退）"} 模式\n`)
 
 	while (true) {
 		const userInput = await rl.question("\nYou: ")
