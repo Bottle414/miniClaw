@@ -8,6 +8,7 @@ import { toolHandler } from "./tools"
 import { messageHandler, createStreamMerger } from "./utils/message"
 import type { LLMMessage } from "./types/llm"
 import type { RuntimeEvent } from "./types/event"
+import type { ReActEvent } from "./types/react"
 import { getDotenvConfig } from "./utils/dotenv"
 import { executeReActLoop } from "./react/loop"
 
@@ -173,15 +174,45 @@ async function sendMessageLegacyStream() {
 }
 
 /**
- * 发送消息到 LLM（新 ReAct 循环）
+ * 发送消息到 LLM（新 ReAct 循环 - 流式输出）
  */
 async function sendMessageReAct(userInput: string) {
-	// 执行 ReAct 循环
+	// 执行 ReAct 循环，传入 onEvent 回调实现流式输出
 	const result = await executeReActLoop({
 		provider,
 		config,
 		userInput,
-		initialMessages: messages
+		initialMessages: messages,
+		onEvent: (event: ReActEvent) => {
+			switch (event.type) {
+				case "text-delta":
+					// 逐 token 输出
+					process.stdout.write(event.delta)
+					break
+				case "tool-call-start":
+					console.log(`\n[调用工具: ${event.toolName}]`)
+					break
+				case "react-iteration-start":
+					if (event.iteration > 0) {
+						console.log(`\n--- 第 ${event.iteration + 1} 轮思考 ---`)
+					}
+					break
+				case "react-tool-execute":
+					console.log(`  执行: ${event.toolName}...`)
+					break
+				case "react-tool-result":
+					if (!event.success) {
+						console.log(`  失败: ${event.toolName} - ${event.result}`)
+					}
+					break
+				case "react-loop-end":
+					// 循环结束，输出换行
+					if (event.reason !== "final_answer") {
+						console.log(`\n(循环结束: ${event.reason}, 共 ${event.iterations} 轮)`)
+					}
+					break
+			}
+		}
 	})
 
 	// 处理结果
@@ -190,11 +221,8 @@ async function sendMessageReAct(userInput: string) {
 		return
 	}
 
-	// 输出响应
-	if (result.response) {
-		console.log("\nAssistant:")
-		console.log(result.response)
-	}
+	// 输出换行
+	console.log()
 
 	// 更新全局消息历史（用于下次对话）
 	messages.length = 0

@@ -28,6 +28,7 @@ import type {
 	DeepSeekChatCompletionChunk
 } from "../../types/providers/deepseek"
 import type { RuntimeEvent } from "../../types/event"
+import { logger } from "../../utils/logger"
 
 /**
  * DeepSeek 适配器实现
@@ -81,6 +82,7 @@ export const deepseekAdapter: LLMAdapter<DeepSeekChatCompletionRequest, DeepSeek
 
 		// 完成事件
 		if (finish_reason) {
+			logger("stream", "gray", "[stream] finish", [finish_reason, dsChunk.usage ? { usage: transformUsage(dsChunk.usage) } : ""])
 			return {
 				type: "finish",
 				reason: finish_reason,
@@ -90,24 +92,22 @@ export const deepseekAdapter: LLMAdapter<DeepSeekChatCompletionRequest, DeepSeek
 
 		const events: RuntimeEvent[] = []
 
-		console.log("文字--------------------------------:")
-
-		console.log(delta.content)
-
 		// 文本增量
 		if (delta.content) {
+			logger("stream", "white", delta.content, undefined, false)
 			events.push({ type: "text-delta", delta: delta.content })
 		}
 
-		console.log("--------------------------------------------------------->")
-
-		console.log("工具调用--------------------------------:")
-		console.log(delta.tool_calls)
-
-		console.log("--------------------------------------------------------->")
-
 		// 工具调用增量
 		if (delta.tool_calls) {
+			logger("stream", "cyan", "\n[stream] tool_calls", [
+				delta.tool_calls.map((tc) => ({
+					id: tc.id || "(续)",
+					name: tc.function?.name || "(续)",
+					argsLen: tc.function?.arguments?.length ?? 0
+				}))
+			])
+
 			for (const tc of delta.tool_calls) {
 				// 首个 chunk 包含 id 和 function.name
 				if (tc.id && tc.function?.name) {
