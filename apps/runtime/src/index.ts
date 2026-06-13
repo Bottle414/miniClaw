@@ -7,7 +7,7 @@ import { DeepSeekProvider } from "./provider"
 import { toolHandler } from "./tools"
 import { createStreamMerger } from "./utils/message"
 import { createToolMessagesFromProviderCalls } from "./utils/tool-message"
-import { buildContext, createRuntimeMemoryState } from "./memory"
+import { buildContext, createLLMSummarizer, createRuntimeMemoryState } from "./memory"
 import type { LLMMessage } from "./types/llm"
 import type { RuntimeEvent } from "./types/event"
 import type { ReActEvent } from "./types/react"
@@ -50,12 +50,14 @@ if (config.soulPrompt) {
 }
 
 let memory = createRuntimeMemoryState()
+const summarizer = createLLMSummarizer(provider, config)
 
-function getContextMessages() {
-	const { contextMessages } = buildContext({
+async function getContextMessages() {
+	const { contextMessages } = await buildContext({
 		messages,
 		memory,
-		options: { preserveRecentMessages: 2 }
+		options: { preserveRecentMessages: 2 },
+		summarizer
 	})
 	logContextMessages(contextMessages)
 	return contextMessages
@@ -75,7 +77,7 @@ async function sendMessageLegacy() {
 	const tools = toolHandler.getToolDefinitions()
 
 	// 构造请求
-	const contextMessages = getContextMessages()
+	const contextMessages = await getContextMessages()
 	const response = await provider.chat({
 		messages: contextMessages,
 		model: config.model,
@@ -138,7 +140,7 @@ async function sendMessageLegacyStream() {
 	// 流式请求
 	console.log("\nAssistant: ")
 
-	const contextMessages = getContextMessages()
+	const contextMessages = await getContextMessages()
 	for await (const event of provider.chatStream({
 		messages: contextMessages,
 		model: config.model,
@@ -207,6 +209,7 @@ async function sendMessageReAct(userInput: string) {
 		initialMessages: messages,
 		memory,
 		contextOptions: { preserveRecentMessages: 2 },
+		summarizer,
 		onEvent: (event: ReActEvent) => {
 			switch (event.type) {
 				case "text-delta":

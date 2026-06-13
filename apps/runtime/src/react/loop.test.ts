@@ -32,6 +32,18 @@ const config: Config = {
 }
 
 test("executeReActLoop sends contextMessages while preserving full ReAct state messages", async () => {
+	const summaryRequests: LLMRequest[] = []
+	const summarizer = {
+		async summarize(messages: LLMRequest["messages"], sourceRange: [number, number]) {
+			summaryRequests.push({ messages, model: "summary" })
+			return {
+				summary: "old context summary",
+				extractedFacts: [],
+				sourceRange,
+				createdAt: 1
+			}
+		}
+	}
 	const requests: LLMRequest[] = []
 	const provider = createProvider([
 		{ type: "text-delta", delta: "done" },
@@ -49,17 +61,20 @@ test("executeReActLoop sends contextMessages while preserving full ReAct state m
 		config,
 		userInput: "new task",
 		initialMessages,
-		contextOptions: { preserveRecentMessages: 1 }
+		contextOptions: { preserveRecentMessages: 1 },
+		summarizer
 	})
 
 	assert.equal(result.error, undefined)
 	assert.equal(requests.length, 1)
 	assert.equal(requests[0]?.messages.length, 2)
-	assert.match(requests[0]?.messages[0]?.content ?? "", /确定性摘要/)
+	assert.match(requests[0]?.messages[0]?.content ?? "", /old context summary/)
+	assert.equal((requests[0]?.messages[0]?.content ?? "").includes("摘要生成器"), false)
 	assert.deepEqual(requests[0]?.messages[1], {
 		role: "user",
 		content: "new task"
 	})
+	assert.equal(summaryRequests.length, 1)
 	assert.deepEqual(result.state.messages.slice(0, 4), [
 		...initialMessages,
 		{ role: "user", content: "new task" }

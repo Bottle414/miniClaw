@@ -1,5 +1,5 @@
 import type { LLMMessage, LLMSystemMessage } from "../types/llm"
-import { simpleSummarizer } from "./summarizer"
+import { renderFactMessage, renderSummaryMessage, simpleSummarizer } from "./summarizer"
 import type {
 	ContextBuilderInput,
 	ContextBuilderOptions,
@@ -74,7 +74,8 @@ function pushMemoryContext(
 	}
 }
 
-export function buildContext(input: ContextBuilderInput): ContextBuildResult {
+/** 构建发送给模型的上下文消息，不修改 canonical messages。 */
+export async function buildContext(input: ContextBuilderInput): Promise<ContextBuildResult> {
 	const options = mergeOptions(input.options)
 	const summarizer = input.summarizer ?? simpleSummarizer
 	const contextMessages: LLMMessage[] = []
@@ -89,9 +90,12 @@ export function buildContext(input: ContextBuilderInput): ContextBuildResult {
 
 	if (olderMessages.length > 0) {
 		if (options.summarizeOlderMessages) {
-			const summaryMessage = summarizer.summarize(olderMessages)
-			if (summaryMessage) {
-				contextMessages.push(summaryMessage)
+			const summaryResult = await summarizer.summarize(olderMessages, [0, splitIndex - 1])
+			if (summaryResult) {
+				const summaryMessage = renderSummaryMessage(summaryResult)
+				const factMessage = renderFactMessage(summaryResult)
+				if (summaryMessage) contextMessages.push(summaryMessage)
+				if (factMessage) contextMessages.push(factMessage)
 				operations.push({
 					type: "summarize",
 					source: "messages",

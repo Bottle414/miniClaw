@@ -205,12 +205,12 @@ async function executeActPhase(
 	const merger = createStreamMerger()
 
 	// 流式请求
-	const contextMessages = buildContext({
+	const contextMessages = (await buildContext({
 		messages: state.messages,
 		memory,
 		options: contextOptions,
 		summarizer
-	}).contextMessages
+	})).contextMessages
 	console.log("\n--- contextMessages 发送给模型 ---")
 	console.log(JSON.stringify(contextMessages, null, 2))
 	console.log("--- contextMessages end ---\n")
