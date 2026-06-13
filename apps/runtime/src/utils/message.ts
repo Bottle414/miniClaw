@@ -1,16 +1,5 @@
 import { LLMToolCall, LLMAssistantMessage } from "../types/llm"
-import { parseToolCalls } from "../adaptor/deepseek"
-import { useTool } from "./tool"
 import type { RuntimeEvent } from "../types/event"
-
-export function messageHandler(message: { tool_calls: any[] }) {
-	if (message.tool_calls?.length) {
-		const toolCalls: LLMToolCall[] = parseToolCalls(message.tool_calls)
-		return useTool(toolCalls)
-	}
-
-	return []
-}
 
 /**
  * 将 RuntimeEvent 序列合并为完整的 LLMAssistantMessage

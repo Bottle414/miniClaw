@@ -5,7 +5,9 @@ import { stdin as input, stdout as output } from "node:process"
 import { createConfig } from "./utils/config"
 import { DeepSeekProvider } from "./provider"
 import { toolHandler } from "./tools"
-import { messageHandler, createStreamMerger } from "./utils/message"
+import { createStreamMerger } from "./utils/message"
+import { createToolMessagesFromProviderCalls } from "./utils/tool-message"
+import { buildContext, createRuntimeMemoryState } from "./memory"
 import type { LLMMessage } from "./types/llm"
 import type { RuntimeEvent } from "./types/event"
 import type { ReActEvent } from "./types/react"
@@ -47,6 +49,24 @@ if (config.soulPrompt) {
 	})
 }
 
+let memory = createRuntimeMemoryState()
+
+function getContextMessages() {
+	const { contextMessages } = buildContext({
+		messages,
+		memory,
+		options: { preserveRecentMessages: 2 }
+	})
+	logContextMessages(contextMessages)
+	return contextMessages
+}
+
+function logContextMessages(contextMessages: LLMMessage[]) {
+	console.log("\n--- contextMessages 发送给模型 ---")
+	console.log(JSON.stringify(contextMessages, null, 2))
+	console.log("--- contextMessages end ---\n")
+}
+
 /**
  * 发送消息到 LLM（旧循环 - 作为回退）
  */
@@ -55,8 +75,9 @@ async function sendMessageLegacy() {
 	const tools = toolHandler.getToolDefinitions()
 
 	// 构造请求
+	const contextMessages = getContextMessages()
 	const response = await provider.chat({
-		messages,
+		messages: contextMessages,
 		model: config.model,
 		tools
 	})
@@ -76,8 +97,8 @@ async function sendMessageLegacy() {
 	if (message.toolCalls && message.toolCalls.length > 0) {
 		console.log("\nAssistant: 调用工具...")
 
-		// 使用 messageHandler 处理工具调用
-		const toolMessages = messageHandler({
+		// 使用工具消息工具处理工具调用
+		const toolMessages = createToolMessagesFromProviderCalls({
 			tool_calls: message.toolCalls.map((tc) => ({
 				id: tc.id,
 				type: "function" as const,
@@ -117,8 +138,9 @@ async function sendMessageLegacyStream() {
 	// 流式请求
 	console.log("\nAssistant: ")
 
+	const contextMessages = getContextMessages()
 	for await (const event of provider.chatStream({
-		messages,
+		messages: contextMessages,
 		model: config.model,
 		tools
 	})) {
@@ -151,8 +173,8 @@ async function sendMessageLegacyStream() {
 
 	// 处理工具调用
 	if (message.toolCalls && message.toolCalls.length > 0) {
-		// 使用 messageHandler 处理工具调用
-		const toolMessages = messageHandler({
+		// 使用工具消息工具处理工具调用
+		const toolMessages = createToolMessagesFromProviderCalls({
 			tool_calls: message.toolCalls.map((tc) => ({
 				id: tc.id,
 				type: "function" as const,
@@ -183,6 +205,8 @@ async function sendMessageReAct(userInput: string) {
 		config,
 		userInput,
 		initialMessages: messages,
+		memory,
+		contextOptions: { preserveRecentMessages: 2 },
 		onEvent: (event: ReActEvent) => {
 			switch (event.type) {
 				case "text-delta":

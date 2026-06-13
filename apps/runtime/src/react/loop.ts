@@ -13,6 +13,8 @@ import { createInitialState, updateState, addMessage, addAction, addObservation,
 import { shouldTerminate, checkFinalAnswer, createErrorTermination } from "./terminator"
 import { toolHandler } from "../tools"
 import { createStreamMerger } from "../utils/message"
+import { buildContext, createRuntimeMemoryState } from "../memory"
+import type { RuntimeMemoryState, ContextBuilderOptions, Summarizer } from "../memory"
 
 /**
  * ReAct 循环配置
@@ -26,6 +28,12 @@ export interface ReActLoopConfig {
 	userInput: string
 	/** 初始消息历史（可选） */
 	initialMessages?: LLMMessage[]
+	/** 运行时记忆状态（可选） */
+	memory?: RuntimeMemoryState
+	/** 上下文构建选项（可选） */
+	contextOptions?: ContextBuilderOptions
+	/** 摘要器（可选） */
+	summarizer?: Summarizer
 	/** 流式事件回调（可选） */
 	onEvent?: (event: ReActEvent) => void
 }
@@ -61,7 +69,16 @@ function emitEvent(onEvent: ((event: ReActEvent) => void) | undefined, event: Re
  * 主编排函数，驱动 Think → Act → Observe → Decide 循环
  */
 export async function executeReActLoop(loopConfig: ReActLoopConfig): Promise<ReActLoopResult> {
-	const { provider, config, userInput, initialMessages = [], onEvent } = loopConfig
+	const {
+		provider,
+		config,
+		userInput,
+		initialMessages = [],
+		memory = createRuntimeMemoryState(),
+		contextOptions,
+		summarizer,
+		onEvent
+	} = loopConfig
 
 	// 初始化状态
 	let state = createInitialState()
@@ -88,7 +105,7 @@ export async function executeReActLoop(loopConfig: ReActLoopConfig): Promise<ReA
 			state = await executeThinkPhase(state, onEvent)
 
 			// Act 阶段
-			const actResult = await executeActPhase(state, provider, config, onEvent)
+			const actResult = await executeActPhase(state, provider, config, memory, contextOptions, summarizer, onEvent)
 			state = actResult.state
 
 			// 检查是否应该终止（最终答案或空响应）
@@ -171,6 +188,9 @@ async function executeActPhase(
 	state: ReActState,
 	provider: Provider,
 	config: Config,
+	memory: RuntimeMemoryState,
+	contextOptions?: ContextBuilderOptions,
+	summarizer?: Summarizer,
 	onEvent?: (event: ReActEvent) => void
 ): Promise<{
 	state: ReActState
@@ -185,8 +205,18 @@ async function executeActPhase(
 	const merger = createStreamMerger()
 
 	// 流式请求
-	for await (const event of provider.chatStream({
+	const contextMessages = buildContext({
 		messages: state.messages,
+		memory,
+		options: contextOptions,
+		summarizer
+	}).contextMessages
+	console.log("\n--- contextMessages 发送给模型 ---")
+	console.log(JSON.stringify(contextMessages, null, 2))
+	console.log("--- contextMessages end ---\n")
+
+	for await (const event of provider.chatStream({
+		messages: contextMessages,
 		model: config.model,
 		tools
 	})) {
