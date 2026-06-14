@@ -1,4 +1,5 @@
 import dotenv from "dotenv"
+import path from "node:path"
 import readline from "node:readline/promises"
 import { stdin as input, stdout as output } from "node:process"
 
@@ -7,10 +8,11 @@ import { DeepSeekProvider } from "./provider"
 import { toolHandler } from "./tools"
 import { createStreamMerger } from "./utils/message"
 import { createToolMessagesFromProviderCalls } from "./utils/tool-message"
-import { buildContext, createLLMSummarizer, createRuntimeMemoryState } from "./memory"
+import { buildContext, createLLMSummarizer, createFileSystemMemoryStore, createRuntimeMemoryState, createSessionManager, setSessionMemory } from "./memory"
 import type { LLMMessage } from "./types/llm"
 import type { RuntimeEvent } from "./types/event"
 import type { ReActEvent } from "./types/react"
+import type { Session } from "./memory/types"
 import { getDotenvConfig } from "./utils/dotenv"
 import { executeReActLoop } from "./react/loop"
 
@@ -51,6 +53,14 @@ if (config.soulPrompt) {
 
 let memory = createRuntimeMemoryState()
 const summarizer = createLLMSummarizer(provider, config)
+
+// 创建 SessionManager
+const sessionsRoot = process.env.SESSIONS_ROOT || path.join(process.cwd(), ".sessions")
+const sessionStore = createFileSystemMemoryStore(sessionsRoot)
+const sessionManager = createSessionManager(sessionStore)
+
+// 当前 session（在 main 中初始化）
+let session: Session
 
 async function getContextMessages() {
 	const { contextMessages } = await buildContext({
@@ -255,6 +265,27 @@ async function sendMessageReAct(userInput: string) {
 	messages.length = 0
 	messages.push(...result.state.messages)
 
+	// 持久化 session
+	session.messages = [...messages]
+	// 将摘要结果追加到 session
+	if (result.summaryResults.length > 0) {
+		session.summary.push(...result.summaryResults)
+		for (const sr of result.summaryResults) {
+			memory = setSessionMemory(memory, {
+				id: `summary-${sr.createdAt}`,
+				content: `摘要: ${sr.summary}`
+			})
+			for (const fact of sr.extractedFacts) {
+				memory = setSessionMemory(memory, {
+					id: `fact-${fact.category}-${fact.content.slice(0, 20)}`,
+					content: `事实: [${fact.category}] ${fact.content}`
+				})
+			}
+		}
+		session.facts.push(...result.summaryResults.flatMap(sr => sr.extractedFacts))
+	}
+	await sessionManager.save(session)
+
 	// 调试信息
 	if (process.env.DEBUG_REACT === "true") {
 		console.log("\n--- ReAct 调试信息 ---")
@@ -272,6 +303,43 @@ async function sendMessageReAct(userInput: string) {
 async function main() {
 	const streamMode = config.stream
 	console.log(`\n使用 ${USE_REACT_LOOP ? "ReAct 循环" : "旧循环（回退）"} 模式${streamMode ? " [流式]" : ""}\n`)
+
+	// 加载或创建 session
+	const sessionId = process.env.SESSION_ID
+	if (sessionId) {
+		const loaded = await sessionManager.load(sessionId)
+		if (loaded) {
+			session = loaded
+			console.log(`已加载 session: ${session.name} (${session.id})`)
+		} else {
+			session = await sessionManager.create({ id: sessionId, name: process.env.SESSION_NAME })
+			console.log(`session ${sessionId} 不存在，已创建新 session: ${session.name}`)
+		}
+	} else {
+		session = await sessionManager.create({ name: process.env.SESSION_NAME })
+		console.log(`已创建新 session: ${session.name} (${session.id})`)
+	}
+
+	// 恢复 session 的 messages 到运行时
+	if (session.messages.length > 0) {
+		messages.length = 0
+		messages.push(...session.messages)
+		console.log(`已恢复 ${session.messages.length} 条历史消息`)
+	}
+
+	// 将 session 的 summary 和 facts 注入到 RuntimeMemoryState 的 session memory
+	for (const result of session.summary) {
+		memory = setSessionMemory(memory, {
+			id: `summary-${result.createdAt}`,
+			content: `摘要: ${result.summary}`
+		})
+	}
+	for (const fact of session.facts) {
+		memory = setSessionMemory(memory, {
+			id: `fact-${fact.category}-${fact.content.slice(0, 20)}`,
+			content: `事实: [${fact.category}] ${fact.content}`
+		})
+	}
 
 	while (true) {
 		const userInput = await rl.question("\nYou: ")

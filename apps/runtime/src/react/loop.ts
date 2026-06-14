@@ -14,7 +14,7 @@ import { shouldTerminate, checkFinalAnswer, createErrorTermination } from "./ter
 import { toolHandler } from "../tools"
 import { createStreamMerger } from "../utils/message"
 import { buildContext, createRuntimeMemoryState } from "../memory"
-import type { RuntimeMemoryState, ContextBuilderOptions, Summarizer } from "../memory"
+import type { RuntimeMemoryState, ContextBuilderOptions, Summarizer, SummaryResult } from "../memory"
 
 /**
  * ReAct 循环配置
@@ -48,6 +48,8 @@ export interface ReActLoopResult {
 	response?: string
 	/** 错误（如果失败） */
 	error?: Error
+	/** 循环期间产生的摘要结果列表 */
+	summaryResults: SummaryResult[]
 }
 
 /**
@@ -82,6 +84,7 @@ export async function executeReActLoop(loopConfig: ReActLoopConfig): Promise<ReA
 
 	// 初始化状态
 	let state = createInitialState()
+	const summaryResults: SummaryResult[] = []
 
 	// 添加初始消息
 	for (const msg of initialMessages) {
@@ -107,6 +110,9 @@ export async function executeReActLoop(loopConfig: ReActLoopConfig): Promise<ReA
 			// Act 阶段
 			const actResult = await executeActPhase(state, provider, config, memory, contextOptions, summarizer, onEvent)
 			state = actResult.state
+			if (actResult.summaryResult) {
+				summaryResults.push(actResult.summaryResult)
+			}
 
 			// 检查是否应该终止（最终答案或空响应）
 			const terminationCheck = shouldTerminate(state, { maxIterations: config.maxIterations ?? 10 }, actResult.assistantMessage)
@@ -142,7 +148,8 @@ export async function executeReActLoop(loopConfig: ReActLoopConfig): Promise<ReA
 
 		return {
 			state,
-			response: lastMessage?.content ?? undefined
+			response: lastMessage?.content ?? undefined,
+			summaryResults
 		}
 	} catch (error) {
 		// 发出循环结束事件（错误）
@@ -154,7 +161,8 @@ export async function executeReActLoop(loopConfig: ReActLoopConfig): Promise<ReA
 
 		return {
 			state,
-			error: error instanceof Error ? error : new Error(String(error))
+			error: error instanceof Error ? error : new Error(String(error)),
+			summaryResults
 		}
 	}
 }
@@ -197,6 +205,7 @@ async function executeActPhase(
 	assistantMessage?: LLMAssistantMessage
 	hasToolCalls: boolean
 	toolCalls?: LLMAssistantMessage["toolCalls"]
+	summaryResult?: SummaryResult
 }> {
 	// 获取工具定义
 	const tools = toolHandler.getToolDefinitions()
@@ -205,12 +214,12 @@ async function executeActPhase(
 	const merger = createStreamMerger()
 
 	// 流式请求
-	const contextMessages = (await buildContext({
+	const { contextMessages, summaryResult } = await buildContext({
 		messages: state.messages,
 		memory,
 		options: contextOptions,
 		summarizer
-	})).contextMessages
+	})
 	console.log("\n--- contextMessages 发送给模型 ---")
 	console.log(JSON.stringify(contextMessages, null, 2))
 	console.log("--- contextMessages end ---\n")
@@ -235,7 +244,8 @@ async function executeActPhase(
 		// 流式响应未完成（中断）
 		return {
 			state,
-			hasToolCalls: false
+			hasToolCalls: false,
+			summaryResult
 		}
 	}
 
@@ -249,7 +259,8 @@ async function executeActPhase(
 		state: newState,
 		assistantMessage: message,
 		hasToolCalls,
-		toolCalls: hasToolCalls ? message.toolCalls : undefined
+		toolCalls: hasToolCalls ? message.toolCalls : undefined,
+		summaryResult
 	}
 }
 

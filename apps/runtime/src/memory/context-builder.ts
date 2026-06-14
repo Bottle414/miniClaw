@@ -6,7 +6,8 @@ import type {
 	ContextBuildOperation,
 	ContextBuildResult,
 	MemoryEntry,
-	RuntimeMemoryState
+	RuntimeMemoryState,
+	SummaryResult
 } from "./types"
 
 const DEFAULT_OPTIONS: Required<ContextBuilderOptions> = {
@@ -80,6 +81,7 @@ export async function buildContext(input: ContextBuilderInput): Promise<ContextB
 	const summarizer = input.summarizer ?? simpleSummarizer
 	const contextMessages: LLMMessage[] = []
 	const operations: ContextBuildOperation[] = []
+	let summaryResult: SummaryResult | undefined
 
 	pushMemoryContext(contextMessages, operations, input.memory, options)
 
@@ -90,10 +92,10 @@ export async function buildContext(input: ContextBuilderInput): Promise<ContextB
 
 	if (olderMessages.length > 0) {
 		if (options.summarizeOlderMessages) {
-			const summaryResult = await summarizer.summarize(olderMessages, [0, splitIndex - 1])
-			if (summaryResult) {
-				const summaryMessage = renderSummaryMessage(summaryResult)
-				const factMessage = renderFactMessage(summaryResult)
+			const result = await summarizer.summarize(olderMessages, [0, splitIndex - 1])
+			if (result) {
+				const summaryMessage = renderSummaryMessage(result)
+				const factMessage = renderFactMessage(result)
 				if (summaryMessage) contextMessages.push(summaryMessage)
 				if (factMessage) contextMessages.push(factMessage)
 				operations.push({
@@ -102,6 +104,7 @@ export async function buildContext(input: ContextBuilderInput): Promise<ContextB
 					count: olderMessages.length,
 					description: "摘要较早消息"
 				})
+				summaryResult = result
 			}
 		} else {
 			operations.push({
@@ -123,5 +126,5 @@ export async function buildContext(input: ContextBuilderInput): Promise<ContextB
 		})
 	}
 
-	return { contextMessages, operations }
+	return { contextMessages, operations, summaryResult }
 }
