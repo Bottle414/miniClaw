@@ -29,74 +29,99 @@ https://api-docs.deepseek.com/zh-cn/
 # 三、架构设计
 
 项目采用 monorepo 结构。项目结构：
+
+```
+入口层 (index.ts)           → Agent Loop 主循环、用户交互
+  ├─ 接入层 (provider/)     → LLM 提供商（封装 API 调用）
+  ├─ 适配层 (adaptor/)      → 统一类型 ↔ 提供商类型 转换
+  ├─ ReAct 层 (react/)      → ReAct 循环、状态机、终止器
+  ├─ 记忆层 (memory/)       → 记忆存储、上下文构建器、摘要器
+  ├─ 工具层 (tools/)        → 工具注册与执行
+  ├─ 提示词 (prompts/)      → 系统提示词、ReAct 提示词、Soul 角色提示词
+  ├─ 类型层 (types/)        → 统一 LLM 类型、Provider 类型、配置类型、事件类型
+  └─ 工具函数 (utils/)      → 配置加载、日志、消息格式化
+```
+
+详细架构设计请参考 [架构设计文档](架构设计.md)。
+
+项目结构：
+
+```
 miniClaw/
 ├── apps/
-│ ├── runtime/ # Agent 运行时
-│ │ ├── index.ts
-│ │ ├── package.json # @mini-claw/runtime
-│ │ ├── tsconfig.json
-│ │ └── nodemon.json
-│ └── web/ # Web UI  
-│ └── ... # @mini-claw/web (Vite + React)
-├── packages/ # 共享包目录（预留）
-├── package.json # 根配置
-├── pnpm-workspace.yaml # workspace 配置
-└── tsconfig.base.json # 共享 TS 配置
+│   ├── runtime/               # Agent 运行时 (@mini-claw/runtime)
+│   │   └── src/
+│   │       ├── adaptor/       #   适配层（DeepSeek adaptor）
+│   │       ├── const/         #   常量
+│   │       ├── memory/        #   记忆层（存储、上下文构建、摘要）
+│   │       ├── prompts/       #   提示词（系统、ReAct、Soul）
+│   │       ├── provider/      #   接入层（DeepSeek Provider）
+│   │       ├── react/         #   ReAct 循环
+│   │       ├── tools/         #   工具注册与执行
+│   │       ├── types/         #   类型定义
+│   │       ├── utils/         #   工具函数
+│   │       └── index.ts       #   入口
+│   └── web/                   # Web UI (@mini-claw/web)
+├── packages/                  # 共享包目录（预留）
+├── docs/                      # 项目文档
+├── openspec/                  # OpenSpec 变更管理
+├── package.json               # 根配置
+├── pnpm-workspace.yaml        # workspace 配置
+└── tsconfig.base.json         # 共享 TS 配置
+```
 
 # 四、技术选型
 
-Node 环境：Node 24
-
-包管理器：pnpm
-
-编程语言：TS
-
-热重载：nodemon
-
-UI 框架：React
-
-脚手架：Vite
-
-文档：本地保留 docs + 飞书链接
+| 类别                 | 技术                       |
+| -------------------- | -------------------------- |
+| 运行环境             | Node.js 24+                |
+| 包管理器             | pnpm                       |
+| 编程语言             | TypeScript                 |
+| 热重载               | tsx watch                  |
+| UI 框架              | React 19                   |
+| 脚手架               | Vite 8                     |
+| LLM API              | OpenAI SDK (兼容 DeepSeek) |
+| 变更管理 + spec 框架 | OpenSpec                   |
 
 # 五、预设功能
 
 目标是实现一个 Agent
 
-1. 核心功能有：
+1. 核心功能：
 
-- [ ] reAct 工作流 - 运行的基础
-
-- [ ] Tool System - 调用工具的能力
-
-- [ ] Memory System - 记忆功能
-
-- [ ] Session System - 当前任务、消息、工具调用
-
-- [ ] 可视化界面 - 面向用户
+- [x] ReAct 工作流 - 运行的基础（思考→行动→观察→决策循环）
+- [x] Tool System - 工具注册与调用能力
+- [x] Memory System - 记忆存储、上下文构建、摘要压缩
+- [x] 流式输出 - SSE 实时流式响应
+- [x] 双层配置 - 运行时配置 + 任务级动态配置
+- [x] Provider 适配 - 统一 LLM 类型层，通过 Adaptor 适配多模型
+- [ ] Session System - 当前任务、消息、工具调用管理
+- [ ] 可视化界面 - 面向用户的 Web UI
 
 2. 额外功能
 
 - [ ] 多模型切换
-
 - [ ] MCP
-
 - [ ] Agent to UI 系统
 
 3. 进阶功能
 
 - [ ] Computer Use
-
 - [ ] Browser Use
-
 - [ ] 支持语音
 
-# 六、参考文献
+# 六、已完成迭代
+
+| #   | 变更                               | 核心内容                                                                                |
+| --- | ---------------------------------- | --------------------------------------------------------------------------------------- |
+| 1   | unified-llm-types                  | 统一 LLM 类型层（LLMMessage/LLMRequest/LLMResponse/LLMTool），DeepSeek adaptor 双向转换 |
+| 2   | implement-provider-initialization  | 双层配置体系（RuntimeConfig + TaskConfig）、Provider 工厂函数、系统提示词加载           |
+| 3   | react-loop-implementation          | ReAct 循环（思考→行动→观察）、ReAct 状态机、终止器、Provider chat 接口                  |
+| 4   | add-streaming-output               | 流式输出、SSE chunk 解析、RuntimeEvent 事件体系、流式 adaptor、流合并                   |
+| 5   | react-streaming-output             | ReAct 循环流式输出、流式事件适配                                                        |
+| 6   | add-memory-system                  | 记忆存储（MemoryStore）、上下文构建器（保留/丢弃/注入/摘要）、确定性摘要器              |
+| 7   | add-structured-summary-compression | 结构化摘要压缩（Fact/SummaryResult/事实分类）、LLM 摘要生成器                           |
+
+# 七、参考文献
 
 [近年 AI 应用技术串讲与优质文档分享｜Agent、Skill、OpenClaw、Harness……](https://oigi8odzc5w.feishu.cn/wiki/WBMfwiNkfi6uNFkRtXdcavDzn0e)
-
-# 七、迭代文档
-
-[MVP 版本](https://jcn6tsijo168.feishu.cn/wiki/OrhWwHiw9iViLZk6w37cXA9knIh)
-
-[架构设计和协议约定](https://jcn6tsijo168.feishu.cn/wiki/G0eBwdpD5iDfHskl6cfc6V6QnFc)
