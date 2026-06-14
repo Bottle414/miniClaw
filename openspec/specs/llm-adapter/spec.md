@@ -12,6 +12,11 @@
 - **WHEN** LLM 返回提供商特定格式的响应
 - **THEN** 适配器将响应转换为统一的 `LLMResponse` 类型
 
+#### Scenario: 流式 chunk 转换
+- **WHEN** LLM 返回提供商特定格式的流式 chunk
+- **THEN** 适配器 SHALL 通过可选的 `transformStreamChunk(chunk)` 方法将 chunk 转换为 `RuntimeEvent | null`
+- **AND** 若 chunk 无有意义内容，返回 `null`
+
 ### Requirement: DeepSeek 适配器实现
 
 系统 SHALL 提供 DeepSeek 提供商的适配器实现。

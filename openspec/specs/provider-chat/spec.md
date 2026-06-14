@@ -31,6 +31,17 @@ Provider SHALL 提供 `chat(req: LLMRequest): Promise<LLMResponse>` 方法，接
 - **AND** 内部摘要 LLMRequest SHALL 使用摘要生成器 system prompt
 - **AND** 内部摘要 LLMRequest SHALL NOT 经过最终任务 Context Builder 递归构建
 
+#### Scenario: 流式对话请求
+- **WHEN** 使用包含 messages 和 model 的有效 LLMRequest 调用 `chatStream()`
+- **THEN** Provider SHALL 使用适配器转换请求并设置 `stream: true`
+- **AND** Provider SHALL 调用 OpenAI 客户端的流式 API
+- **AND** Provider SHALL 返回 `AsyncIterable<RuntimeEvent>`
+
+#### Scenario: 流式 chunk 转换
+- **WHEN** Provider 收到流式 SSE chunk
+- **THEN** Provider SHALL 使用适配器的 `transformStreamChunk()` 转换每个 chunk
+- **AND** Provider SHALL 跳过返回 `null` 的 chunk
+
 ### Requirement: Provider 集成适配器进行类型转换
 
 Provider SHALL 使用适配器层在统一类型和提供商特定类型之间进行转换。
@@ -46,6 +57,11 @@ Provider SHALL 使用适配器层在统一类型和提供商特定类型之间�
 - **WHEN** 收到 OpenAI API 的响应
 - **THEN** Provider SHALL 使用 DeepSeek 响应调用 `adaptor.transformResponse()`
 - **AND** 结果 SHALL 为 LLMResponse 对象
+
+#### Scenario: 流式 chunk 转换
+- **WHEN** 收到流式 SSE chunk
+- **THEN** Provider SHALL 使用 `adaptor.transformStreamChunk()` 转换 chunk
+- **AND** 结果 SHALL 为 RuntimeEvent 或 null
 
 ### Requirement: Provider 处理 API 错误
 
@@ -65,6 +81,11 @@ Provider SHALL 处理底层 API 客户端的错误。
 
 - **WHEN** API 调用因网络问题失败
 - **THEN** Provider SHALL 抛出包含网络错误详情的错误
+
+#### Scenario: 流式错误
+- **WHEN** 流式处理过程中发生错误
+- **THEN** Provider SHALL 发出 `{ type: 'error', error }` RuntimeEvent
+- **AND** Provider SHALL 结束迭代
 
 ### Requirement: Provider 返回结构化响应
 
