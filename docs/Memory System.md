@@ -8,6 +8,7 @@ miniClaw 早期只有一份 `messages`，既作为完整对话历史，也直接
 - **权威历史与模型输入耦合**：为了节省 token 如果直接改 `messages`，会破坏真实对话历史。
 - **记忆缺少分层**：会话级事实、当前任务临时状态和真实消息混在一起，不利于后续检索、更新和清理。
 - **摘要职责不清晰**：摘要不应该直接决定最终 `LLMMessage` 的形态，否则压缩、事实提取和上下文拼装会耦合在一起。
+- **会话无法持久化**：所有数据仅存在于内存中，进程退出即丢失，无法恢复历史对话或复用已积累的上下文。
 
 Memory System 的目标是把“完整历史”和“本次模型调用看到什么”分开：
 
@@ -16,6 +17,7 @@ Memory System 的目标是把“完整历史”和“本次模型调用看到什
 - Session Memory / Working Memory 提供可注入的结构化上下文。
 - Context Builder 负责根据策略组装上下文。
 - Summarizer 只负责压缩消息并返回结构化摘要结果。
+- Session Persistence 将对话、摘要和事实持久化到本地文件，支持跨会话恢复。
 
 ## 总体设计
 
@@ -24,7 +26,7 @@ Memory System 的目标是把“完整历史”和“本次模型调用看到什
 ```text
 canonical messages
        │
-       │        session memory
+       │        session memory ◄── session.summary / session.facts
        │             │
        │        working memory
        │             │
@@ -40,6 +42,16 @@ canonical messages
        │
        ▼
  Provider.chat / Provider.chatStream
+       │
+       ▼
+ SummaryResult[] ──────────────► Session Persistence
+                                      │
+                                      ▼
+                              .sessions/<id>/
+                                metadata.json
+                                messages.json
+                                summary.json
+                                facts.json
 ```
 
 ### 职责拆分
@@ -51,6 +63,8 @@ canonical messages
 | Working Memory     | 保存当前任务/迭代的临时上下文                          | 长期持久化                     |
 | Context Builder    | 构建 `contextMessages`，执行保留、丢弃、注入、摘要渲染 | 直接调用 Provider 生成摘要内容 |
 | Summarizer         | 压缩选定消息，返回 `SummaryResult`                     | 决定最终消息顺序               |
+| MemoryStore        | 持久化存储抽象，提供 save / load / delete / exists     | 业务逻辑、ID 生成              |
+| SessionManager     | 管理 session 生命周期（create / load / save / delete） | 直接读写文件                   |
 | Provider / adaptor | 发送统一 `LLMRequest`，做提供商类型转换                | 维护记忆状态、选择上下文       |
 
 ## Canonical Messages 与 Context Messages
@@ -159,6 +173,7 @@ Context Builder 会同时返回操作记录，方便调试和测试：
 interface ContextBuildResult {
 	contextMessages: LLMMessage[]
 	operations: ContextBuildOperation[]
+	summaryResult?: SummaryResult
 }
 ```
 
@@ -344,15 +359,26 @@ ReActState {
 Act 阶段调用模型前执行：
 
 ```ts
-const contextMessages = (
-	await buildContext({
-		messages: state.messages,
-		memory,
-		options: contextOptions,
-		summarizer
-	})
-).contextMessages
+const { contextMessages, summaryResult } = await buildContext({
+    messages: state.messages,
+    memory,
+    options: contextOptions,
+    summarizer
+})
 ```
+
+循环结束后，`ReActLoopResult` 携带累积的摘要结果：
+
+```ts
+interface ReActLoopResult {
+    state: ReActState
+    response?: string
+    error?: Error
+    summaryResults: SummaryResult[]
+}
+```
+
+调用方可将 `summaryResults` 追加到 session 并持久化。
 
 这样可以保证：
 
@@ -382,16 +408,24 @@ Memory System 的测试应覆盖：
    - ReAct Act 阶段发送压缩后的 `contextMessages`。
    - `state.messages` 仍保留完整历史。
 
+6. **Session 持久化**
+   - FileSystemMemoryStore 的 save/load/delete/exists 操作正确。
+   - SessionManager 的 create/load/save/delete 生命周期正确，包括外部 ID 和 name。
+   - Session 恢复：messages 还原到运行时数组，summary/facts 注入到 session memory。
+   - 缺失文件时（如只有 metadata.json）load 优雅降级。
+
 ## 后续演进方向
 
 当前 Memory System 仍是基础版本，后续可以继续演进：
 
 - **token budget**：从固定 `preserveRecentMessages` 改为基于 token 预算选择上下文。
 - **摘要缓存**：对相同 `sourceRange` 缓存 `SummaryResult`，减少重复 LLM 调用。
-- **事实持久化**：将高价值 `Fact` 提升为 Session Memory 或项目级记忆。
 - **记忆检索**：引入关键词、标签或向量检索，按任务选择相关记忆。
 - **摘要质量控制**：增加事实来源索引、置信度、重复事实合并和冲突检测。
 - **策略配置化**：允许不同运行模式使用不同 Context Builder 策略。
+- **远程存储**：MemoryStore 接口支持远程/云端存储实现。
+- **session 列表与搜索**：支持列出、搜索、清理历史 session。
+- **增量写入**：大 session 场景下，改为增量写入而非全量 JSON。
 
 ## 设计原则
 
@@ -399,4 +433,103 @@ Memory System 的测试应覆盖：
 - `contextMessages` 是派生结果，每次模型调用前重新构建。
 - Summarizer 返回数据，Context Builder 负责渲染消息。
 - 摘要生成器 prompt 是内部机制，不污染最终任务上下文。
+- Session 的 summary/facts 持久化后，下次启动可恢复为 session memory。
+- MemoryStore 是抽象接口，FileSystemMemoryStore 是默认实现，未来可替换。
+- SessionManager 处理业务逻辑（ID 生成、时间戳），MemoryStore 只负责 I/O。
+- 所有模块使用函数+闭包实现，不使用 class，与项目约定一致。
 - 先保证结构清晰和可测试，再扩展复杂的 token 预算、检索和持久化能力。
+
+## Session Persistence
+
+Session Persistence 为 Memory System 增加持久化能力，使对话可恢复、上下文可跨会话延续。
+
+### 存储结构
+
+每个 session 在存储根目录下创建一个文件夹，包含四个 JSON 文件：
+
+```text
+<sessionsRoot>/
+  <sessionId>/
+    metadata.json    — { id, name, createdAt, updatedAt }
+    messages.json    — LLMMessage[]
+    summary.json     — SummaryResult[]
+    facts.json       — Fact[]
+```
+
+- `metadata.json` 包含 session 元数据，`createdAt` 和 `updatedAt` 使用 ISO 8601 字符串。
+- `messages.json` 保存完整对话历史，消息顺序与运行时一致。
+- `summary.json` 保存每次 Context Builder 产生的摘要结果。
+- `facts.json` 保存从所有摘要中提取的结构化事实。
+
+### MemoryStore 接口
+
+```ts
+interface MemoryStore {
+    save(sessionId: string, data: SessionData): Promise<void>
+    load(sessionId: string): Promise<SessionData | null>
+    delete(sessionId: string): Promise<void>
+    exists(sessionId: string): Promise<boolean>
+}
+```
+
+MemoryStore 是持久化存储的统一抽象。当前默认实现为 `createFileSystemMemoryStore(sessionsRoot)`，基于本地文件系统。未来可替换为远程/云端实现。
+
+### SessionManager
+
+```ts
+function createSessionManager(store: MemoryStore, now?: () => number) {
+    return {
+        create: (options?: { id?: string, name?: string }) => Promise<Session>,
+        load: (sessionId: string) => Promise<Session | null>,
+        save: (session: Session) => Promise<void>,
+        delete: (sessionId: string) => Promise<void>,
+    }
+}
+```
+
+SessionManager 使用函数+闭包模式（不使用 class），负责：
+
+- **ID 生成**：无外部 ID 时使用 `crypto.randomUUID()` 生成 UUID v4。
+- **时间戳管理**：创建时设置 `createdAt` 和 `updatedAt`，保存时更新 `updatedAt`。
+- **与 MemoryStore 交互**：负责 Session ↔ SessionData 的转换。
+
+### Runtime 启动流程
+
+```text
+1. 从环境变量读取 SESSION_ID / SESSION_NAME / SESSIONS_ROOT
+2. 创建 MemoryStore → createFileSystemMemoryStore(sessionsRoot)
+3. 创建 SessionManager → createSessionManager(store)
+4. 如果 SESSION_ID 存在 → sessionManager.load(id)
+   - 加载成功：恢复 session
+   - 加载失败：sessionManager.create({ id, name }) 创建新 session
+5. 如果无 SESSION_ID → sessionManager.create() 创建新 session
+6. 恢复 session.messages 到运行时 messages 数组
+7. 将 session.summary/facts 注入 RuntimeMemoryState 的 session memory
+8. 每轮对话结束后 sessionManager.save(session) 持久化
+9. 摘要产生后将 SummaryResult 追加到 session.summary，Fact 追加到 session.facts
+```
+
+### Session 与 SessionData 转换
+
+```ts
+// Session → SessionData（持久化）
+function sessionToData(session: Session): SessionData {
+    return {
+        metadata: { id, name, createdAt, updatedAt },
+        messages, summary, facts
+    }
+}
+
+// SessionData → Session（运行时）
+function dataToSession(data: SessionData): Session {
+    return { ...metadata, messages, summary, facts }
+}
+```
+
+### 环境变量
+
+| 变量 | 说明 | 默认值 |
+|------|------|--------|
+| `SESSIONS_ROOT` | session 存储根目录 | `<cwd>/.sessions` |
+| `SESSION_ID` | 要加载的 session ID | 无（创建新 session） |
+| `SESSION_NAME` | session 名称 | `session-<id>` |
