@@ -36,6 +36,8 @@ export interface ReActLoopConfig {
 	summarizer?: Summarizer
 	/** 流式事件回调（可选） */
 	onEvent?: (event: ReActEvent) => void
+	/** 会话 ID（用于工具调用日志和指标持久化） */
+	sessionId?: string
 }
 
 /**
@@ -79,7 +81,8 @@ export async function executeReActLoop(loopConfig: ReActLoopConfig): Promise<ReA
 		memory = createRuntimeMemoryState(),
 		contextOptions,
 		summarizer,
-		onEvent
+		onEvent,
+		sessionId
 	} = loopConfig
 
 	// 初始化状态
@@ -124,7 +127,7 @@ export async function executeReActLoop(loopConfig: ReActLoopConfig): Promise<ReA
 
 			// Observe 阶段（如果有工具调用）
 			if (actResult.hasToolCalls) {
-				state = await executeObservePhase(state, actResult.toolCalls!, onEvent)
+				state = await executeObservePhase(state, actResult.toolCalls!, onEvent, sessionId)
 			}
 
 			// Decide 阶段
@@ -272,7 +275,8 @@ async function executeActPhase(
 async function executeObservePhase(
 	state: ReActState,
 	toolCalls: NonNullable<LLMAssistantMessage["toolCalls"]>,
-	onEvent?: (event: ReActEvent) => void
+	onEvent?: (event: ReActEvent) => void,
+	sessionId?: string
 ): Promise<ReActState> {
 	// 设置阶段为 observing
 	let newState = setPhase(state, "observing")
@@ -302,7 +306,14 @@ async function executeObservePhase(
 
 		try {
 			const params = JSON.parse(argsStr || "{}")
-			result = toolHandler.call(name, params)
+			const toolResult = await toolHandler.call(name, params, sessionId)
+			if (toolResult.error) {
+				success = false
+				error = `${toolResult.error.code}: ${toolResult.error.message}`
+				result = `Error: ${error}`
+			} else {
+				result = toolResult.content
+			}
 		} catch (err) {
 			success = false
 			error = err instanceof Error ? err.message : String(err)

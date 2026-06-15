@@ -18,7 +18,7 @@ const colors = new Map<string, string>([
 ])
 
 /** infoType 到环境变量的映射 */
-const envMap = new Map<string, string>([["stream", "STREAMING_OUTPUT_DEBUG"]])
+const envMap = new Map<string, string>([["stream", "STREAMING_OUTPUT_DEBUG"], ["tool", "TOOL_LOG_DEBUG"]])
 
 /**
  * 受控日志打印

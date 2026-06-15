@@ -110,7 +110,7 @@ async function sendMessageLegacy() {
 		console.log("\nAssistant: 调用工具...")
 
 		// 使用工具消息工具处理工具调用
-		const toolMessages = createToolMessagesFromProviderCalls({
+		const toolMessages = await createToolMessagesFromProviderCalls({
 			tool_calls: message.toolCalls.map((tc) => ({
 				id: tc.id,
 				type: "function" as const,
@@ -119,7 +119,7 @@ async function sendMessageLegacy() {
 					arguments: tc.arguments
 				}
 			}))
-		})
+		}, session.id)
 
 		if (toolMessages && toolMessages.length > 0) {
 			// 添加工具消息到历史
@@ -186,7 +186,7 @@ async function sendMessageLegacyStream() {
 	// 处理工具调用
 	if (message.toolCalls && message.toolCalls.length > 0) {
 		// 使用工具消息工具处理工具调用
-		const toolMessages = createToolMessagesFromProviderCalls({
+		const toolMessages = await createToolMessagesFromProviderCalls({
 			tool_calls: message.toolCalls.map((tc) => ({
 				id: tc.id,
 				type: "function" as const,
@@ -195,7 +195,7 @@ async function sendMessageLegacyStream() {
 					arguments: tc.arguments
 				}
 			}))
-		})
+		}, session.id)
 
 		if (toolMessages && toolMessages.length > 0) {
 			// 添加工具消息到历史
@@ -220,6 +220,7 @@ async function sendMessageReAct(userInput: string) {
 		memory,
 		contextOptions: { preserveRecentMessages: 2 },
 		summarizer,
+		sessionId: session.id,
 		onEvent: (event: ReActEvent) => {
 			switch (event.type) {
 				case "text-delta":

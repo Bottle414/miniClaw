@@ -1,4 +1,5 @@
 import type { LLMTool } from "../types/llm"
+import type { ToolExecutor, ToolMetadata } from "../types/llm/tool"
 
 /** 工具定义 */
 export const weatherGetWeather = {
@@ -16,11 +17,15 @@ export const weatherGetWeather = {
 			required: ["city"]
 		}
 	} satisfies LLMTool,
-	executor: (params: Record<string, unknown>): string => {
+	metadata: {
+		category: "network",
+		cacheable: true
+	} satisfies ToolMetadata,
+	executor: (async (params: Record<string, unknown>) => {
 		const { city } = params as { city: string }
 		if (city === "上海") {
-			return "sunny"
+			return { content: "sunny" }
 		}
-		return "rainy"
-	}
+		return { content: "rainy" }
+	}) satisfies ToolExecutor
 }
