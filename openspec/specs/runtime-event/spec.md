@@ -2,13 +2,13 @@
 
 ## Purpose
 
-定义流式输出的标准事件协议，作为 LLM 流式响应与 runtime 之间的通信契约。
+定义 LLM provider 流式输出的标准事件协议（ProviderEvent），作为 provider 层与 runtime 之间的通信契约。
 
 ## Requirements
 
 ### Requirement: Runtime Event 类型定义
 
-系统 SHALL 提供 `RuntimeEvent` discriminated union 类型，作为流式输出的标准事件协议。
+系统 SHALL 提供 `ProviderEvent` discriminated union 类型，作为 LLM provider 流式输出的标准事件协议。ProviderEvent SHALL 包含 TextDeltaEvent、ToolCallStartEvent、ToolCallDeltaEvent、ToolCallEndEvent、FinishEvent、ErrorEvent。ProviderEvent SHALL NOT 包含 ToolResultEvent。
 
 #### Scenario: 文本增量事件
 - **WHEN** LLM 产出文本内容增量
@@ -24,11 +24,7 @@
 
 #### Scenario: 工具调用结束事件
 - **WHEN** LLM 完成一个工具调用的参数输出
-- **THEN** 系统 SHALL 发出 `{ type: 'tool-call-end', toolCallId: string, arguments: string }` 事件，包含完整参数字符串
-
-#### Scenario: 工具结果事件
-- **WHEN** runtime 执行完工具并得到结果
-- **THEN** 系统 SHALL 发出 `{ type: 'tool-result', toolCallId: string, result: string, success: boolean }` 事件
+- **THEN** 系统 SHALL 发出 `{ type: 'tool-call-end', toolCallId: string, arguments: string }` 事件
 
 #### Scenario: 完成事件
 - **WHEN** LLM 完成响应
@@ -40,7 +36,7 @@
 
 ### Requirement: Runtime Event 类型安全
 
-系统 SHALL 保证 RuntimeEvent 的类型安全，通过 `type` 字段实现 discriminated union。
+系统 SHALL 保证 ProviderEvent 的类型安全，通过 `type` 字段实现 discriminated union。
 
 #### Scenario: 类型收窄
 - **WHEN** 消费者通过 `type` 字段判断事件类型
