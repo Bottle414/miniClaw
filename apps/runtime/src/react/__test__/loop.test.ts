@@ -59,16 +59,22 @@ test("executeReActLoop sends contextMessages while preserving full ReAct state m
 		{ role: "user" as const, content: "current" }
 	]
 
-	const result = await executeReActLoop({
+	// 从事件流中收集 LoopCompleteEvent
+	let loopCompleteEvent: import("../../types/event").LoopCompleteEvent | undefined
+	for await (const event of executeReActLoop({
 		provider,
 		config,
 		userInput: "new task",
 		initialMessages,
 		contextOptions: { preserveRecentMessages: 1 },
 		summarizer
-	})
+	})) {
+		if (event.type === "loop-complete") {
+			loopCompleteEvent = event
+		}
+	}
 
-	assert.equal(result.error, undefined)
+	assert.equal(loopCompleteEvent?.error, undefined)
 	assert.equal(requests.length, 1)
 	assert.equal(requests[0]?.messages.length, 2)
 	assert.match(requests[0]?.messages[0]?.content ?? "", /old context summary/)
@@ -78,8 +84,8 @@ test("executeReActLoop sends contextMessages while preserving full ReAct state m
 		content: "new task"
 	})
 	assert.equal(summaryRequests.length, 1)
-	assert.deepEqual(result.state.messages.slice(0, 4), [...initialMessages, { role: "user", content: "new task" }])
-	assert.deepEqual(result.state.messages.at(-1), {
+	assert.deepEqual(loopCompleteEvent?.state.messages.slice(0, 4), [...initialMessages, { role: "user", content: "new task" }])
+	assert.deepEqual(loopCompleteEvent?.state.messages.at(-1), {
 		role: "assistant",
 		content: "done",
 		toolCalls: undefined

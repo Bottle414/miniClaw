@@ -9,6 +9,8 @@ import type { LLMFinishReason, LLMUsage } from "../llm"
 import type { ProviderEvent } from "./provider-event"
 import type { RuntimePhase } from "../react/phase"
 import type { TerminationReason } from "../react/termination"
+import type { ReActState } from "../react/state"
+import type { SummaryResult } from "../../memory/types"
 
 // ============== Runtime Lifecycle Event Types ==============
 
@@ -59,6 +61,19 @@ export interface LoopEndEvent {
 	iterations: number
 }
 
+/** 循环完成事件（携带最终结果） */
+export interface LoopCompleteEvent {
+	type: "loop-complete"
+	/** 最终状态 */
+	state: ReActState
+	/** 最终响应（如果成功） */
+	response?: string
+	/** 错误（如果失败） */
+	error?: Error
+	/** 循环期间产生的摘要结果列表 */
+	summaryResults: SummaryResult[]
+}
+
 // ============== 联合类型 ==============
 
 /**
@@ -81,3 +96,4 @@ export type RuntimeLifecycleEvent =
 export type RuntimeEvent =
 	| ProviderEvent
 	| RuntimeLifecycleEvent
+	| LoopCompleteEvent

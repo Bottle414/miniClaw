@@ -2,7 +2,7 @@
  * ReAct 循环编排模块
  *
  * 实现 Think → Act → Observe → Decide 循环
- * 支持流式输出：Act 阶段使用 chatStream，通过 onEvent 回调传递事件
+ * 支持流式输出：通过 AsyncIterable yield 事件，消费者 for await...of 拉取
  */
 
 import type { Provider } from "../types/providers"
@@ -35,45 +35,63 @@ export interface ReActLoopConfig {
 	contextOptions?: ContextBuilderOptions
 	/** 摘要器（可选） */
 	summarizer?: Summarizer
-	/** 流式事件回调（可选） */
-	onEvent?: (event: RuntimeEvent) => void
 	/** 会话 ID（用于工具调用日志和指标持久化） */
 	sessionId?: string
 }
 
 /**
- * ReAct 循环执行结果
+ * Think 阶段结果
  */
-export interface ReActLoopResult {
-	/** 最终状态 */
+interface ThinkPhaseResult {
+	/** 更新后的状态 */
 	state: ReActState
-	/** 最终响应（如果成功） */
-	response?: string
-	/** 错误（如果失败） */
-	error?: Error
-	/** 循环期间产生的摘要结果列表 */
-	summaryResults: SummaryResult[]
+	/** 需要 yield 的事件 */
+	events: RuntimeEvent[]
 }
 
 /**
- * 安全地发出事件
- * 回调异常时记录但不中断循环
+ * Act 阶段结果（非流式部分）
  */
-function emitEvent(onEvent: ((event: RuntimeEvent) => void) | undefined, event: RuntimeEvent): void {
-	if (!onEvent) return
-	try {
-		onEvent(event)
-	} catch (err) {
-		console.error("[ReAct] onEvent callback error:", err instanceof Error ? err.message : String(err))
-	}
+interface ActPhaseResult {
+	/** 更新后的状态 */
+	state: ReActState
+	/** 助手消息 */
+	assistantMessage?: LLMAssistantMessage
+	/** 是否有工具调用 */
+	hasToolCalls: boolean
+	/** 工具调用列表 */
+	toolCalls?: LLMAssistantMessage["toolCalls"]
+	/** 摘要结果 */
+	summaryResult?: SummaryResult
+}
+
+/**
+ * Observe 阶段结果
+ */
+interface ObservePhaseResult {
+	/** 更新后的状态 */
+	state: ReActState
+	/** 需要 yield 的事件 */
+	events: RuntimeEvent[]
+}
+
+/**
+ * Decide 阶段结果
+ */
+interface DecidePhaseResult {
+	/** 更新后的状态 */
+	state: ReActState
+	/** 需要 yield 的事件 */
+	events: RuntimeEvent[]
 }
 
 /**
  * 执行 ReAct 循环
  *
  * 主编排函数，驱动 Think → Act → Observe → Decide 循环
+ * 通过 AsyncIterable yield RuntimeEvent，消费者 for await...of 拉取
  */
-export async function executeReActLoop(loopConfig: ReActLoopConfig): Promise<ReActLoopResult> {
+export async function* executeReActLoop(loopConfig: ReActLoopConfig): AsyncIterable<RuntimeEvent> {
 	const {
 		provider,
 		config,
@@ -82,7 +100,6 @@ export async function executeReActLoop(loopConfig: ReActLoopConfig): Promise<ReA
 		memory = createRuntimeMemoryState(),
 		contextOptions,
 		summarizer,
-		onEvent,
 		sessionId
 	} = loopConfig
 
@@ -105,14 +122,18 @@ export async function executeReActLoop(loopConfig: ReActLoopConfig): Promise<ReA
 	try {
 		// 主循环
 		while (!state.shouldTerminate) {
-			// 发出迭代开始事件
-			emitEvent(onEvent, { type: "iteration-start", iteration: state.iteration })
+			// yield 迭代开始事件
+			yield { type: "iteration-start", iteration: state.iteration }
 
 			// Think 阶段
-			state = await executeThinkPhase(state, onEvent)
+			const thinkResult = executeThinkPhase(state)
+			state = thinkResult.state
+			for (const event of thinkResult.events) {
+				yield event
+			}
 
-			// Act 阶段
-			const actResult = await executeActPhase(state, provider, config, memory, contextOptions, summarizer, onEvent)
+			// Act 阶段（实时 yield ProviderEvent）
+			const actResult = yield* executeActPhase(state, provider, config, memory, contextOptions, summarizer)
 			state = actResult.state
 			if (actResult.summaryResult) {
 				summaryResults.push(actResult.summaryResult)
@@ -128,11 +149,19 @@ export async function executeReActLoop(loopConfig: ReActLoopConfig): Promise<ReA
 
 			// Observe 阶段（如果有工具调用）
 			if (actResult.hasToolCalls) {
-				state = await executeObservePhase(state, actResult.toolCalls!, onEvent, sessionId)
+				const observeResult = await executeObservePhase(state, actResult.toolCalls!, sessionId)
+				state = observeResult.state
+				for (const event of observeResult.events) {
+					yield event
+				}
 			}
 
 			// Decide 阶段
-			state = executeDecidePhase(state, config, onEvent)
+			const decideResult = executeDecidePhase(state, config)
+			state = decideResult.state
+			for (const event of decideResult.events) {
+				yield event
+			}
 
 			// 检查迭代限制
 			if (state.shouldTerminate) {
@@ -140,30 +169,33 @@ export async function executeReActLoop(loopConfig: ReActLoopConfig): Promise<ReA
 			}
 		}
 
-		// 发出循环结束事件
-		emitEvent(onEvent, {
+		// yield 循环结束事件
+		yield {
 			type: "loop-end",
 			reason: state.terminationReason ?? "final_answer",
 			iterations: state.iteration
-		})
+		}
 
-		// 返回结果
+		// yield 循环完成事件（携带最终结果）
 		const lastMessage = state.messages[state.messages.length - 1] as LLMAssistantMessage | undefined
 
-		return {
+		yield {
+			type: "loop-complete",
 			state,
 			response: lastMessage?.content ?? undefined,
 			summaryResults
 		}
 	} catch (error) {
-		// 发出循环结束事件（错误）
-		emitEvent(onEvent, {
+		// yield 循环结束事件（错误）
+		yield {
 			type: "loop-end",
 			reason: "error",
 			iterations: state.iteration
-		})
+		}
 
-		return {
+		// yield 循环完成事件（错误）
+		yield {
+			type: "loop-complete",
 			state,
 			error: error instanceof Error ? error : new Error(String(error)),
 			summaryResults
@@ -176,41 +208,37 @@ export async function executeReActLoop(loopConfig: ReActLoopConfig): Promise<ReA
  *
  * 准备发送消息到 LLM
  */
-async function executeThinkPhase(state: ReActState, onEvent?: (event: RuntimeEvent) => void): Promise<ReActState> {
+function executeThinkPhase(state: ReActState): ThinkPhaseResult {
+	const events: RuntimeEvent[] = []
+
 	// 设置阶段为 thinking
 	let newState = setPhase(state, "thinking")
-	emitEvent(onEvent, { type: "phase-change", phase: "thinking", iteration: state.iteration })
+	events.push({ type: "phase-change", phase: "thinking", iteration: state.iteration })
 
 	// 在实际实现中，可以在这里添加推理提示
 	// 当前实现：直接进入 acting 阶段
 
 	// 设置阶段为 acting（准备调用 LLM）
 	newState = setPhase(newState, "acting")
-	emitEvent(onEvent, { type: "phase-change", phase: "acting", iteration: state.iteration })
+	events.push({ type: "phase-change", phase: "acting", iteration: state.iteration })
 
-	return newState
+	return { state: newState, events }
 }
 
 /**
  * Act 阶段处理器
  *
- * 流式调用 LLM 并解析响应
+ * 流式调用 LLM 并实时 yield ProviderEvent
+ * 使用 async function* 保证流式事件实时传出
  */
-async function executeActPhase(
+async function* executeActPhase(
 	state: ReActState,
 	provider: Provider,
 	config: Config,
 	memory: RuntimeMemoryState,
 	contextOptions?: ContextBuilderOptions,
-	summarizer?: Summarizer,
-	onEvent?: (event: RuntimeEvent) => void
-): Promise<{
-	state: ReActState
-	assistantMessage?: LLMAssistantMessage
-	hasToolCalls: boolean
-	toolCalls?: LLMAssistantMessage["toolCalls"]
-	summaryResult?: SummaryResult
-}> {
+	summarizer?: Summarizer
+): AsyncGenerator<RuntimeEvent, ActPhaseResult> {
 	// 获取工具定义
 	const tools = toolHandler.getToolDefinitions()
 
@@ -224,17 +252,14 @@ async function executeActPhase(
 		options: contextOptions,
 		summarizer
 	})
-	console.log("\n--- contextMessages 发送给模型 ---")
-	console.log(JSON.stringify(contextMessages, null, 2))
-	console.log("--- contextMessages end ---\n")
 
 	for await (const event of provider.chatStream({
 		messages: contextMessages,
 		model: config.model,
 		tools
 	})) {
-		// 透传 Provider 流式事件
-		emitEvent(onEvent, event)
+		// 实时 yield ProviderEvent
+		yield event
 		// 累积到合并器
 		merger.push(event)
 	}
@@ -252,7 +277,7 @@ async function executeActPhase(
 	}
 
 	// 将助手消息添加到历史
-	let newState = addMessage(state, message)
+	const newState = addMessage(state, message)
 
 	// 检查是否有工具调用
 	const hasToolCalls = message.toolCalls !== undefined && message.toolCalls.length > 0
@@ -274,12 +299,13 @@ async function executeActPhase(
 async function executeObservePhase(
 	state: ReActState,
 	toolCalls: NonNullable<LLMAssistantMessage["toolCalls"]>,
-	onEvent?: (event: RuntimeEvent) => void,
 	sessionId?: string
-): Promise<ReActState> {
+): Promise<ObservePhaseResult> {
+	const events: RuntimeEvent[] = []
+
 	// 设置阶段为 observing
 	let newState = setPhase(state, "observing")
-	emitEvent(onEvent, { type: "phase-change", phase: "observing", iteration: state.iteration })
+	events.push({ type: "phase-change", phase: "observing", iteration: state.iteration })
 
 	// 执行工具并收集观察结果
 	const toolMessages: LLMToolMessage[] = []
@@ -287,8 +313,8 @@ async function executeObservePhase(
 	for (const toolCall of toolCalls) {
 		const { id, name, arguments: argsStr } = toolCall
 
-		// 发出工具执行开始事件
-		emitEvent(onEvent, { type: "tool-execute", toolCallId: id, toolName: name })
+		// 添加工具执行开始事件
+		events.push({ type: "tool-execute", toolCallId: id, toolName: name })
 
 		// 创建行动记录
 		const actionRecord: ActionRecord = {
@@ -319,8 +345,8 @@ async function executeObservePhase(
 			result = `Error: ${error}`
 		}
 
-		// 发出工具执行结果事件
-		emitEvent(onEvent, { type: "tool-result", toolCallId: id, toolName: name, result, success })
+		// 添加工具执行结果事件
+		events.push({ type: "tool-result", toolCallId: id, toolName: name, result, success })
 
 		// 更新行动记录
 		actionRecord.result = result
@@ -357,7 +383,7 @@ async function executeObservePhase(
 		newState = addMessage(newState, msg)
 	}
 
-	return newState
+	return { state: newState, events }
 }
 
 /**
@@ -365,10 +391,12 @@ async function executeObservePhase(
  *
  * 检查终止条件并决定是否继续
  */
-function executeDecidePhase(state: ReActState, config: Config, onEvent?: (event: RuntimeEvent) => void): ReActState {
+function executeDecidePhase(state: ReActState, config: Config): DecidePhaseResult {
+	const events: RuntimeEvent[] = []
+
 	// 设置阶段为 deciding
 	let newState = setPhase(state, "deciding")
-	emitEvent(onEvent, { type: "phase-change", phase: "deciding", iteration: state.iteration })
+	events.push({ type: "phase-change", phase: "deciding", iteration: state.iteration })
 
 	// 增加迭代次数
 	newState = incrementIteration(newState)
@@ -383,5 +411,5 @@ function executeDecidePhase(state: ReActState, config: Config, onEvent?: (event:
 		newState = setPhase(newState, "thinking")
 	}
 
-	return newState
+	return { state: newState, events }
 }

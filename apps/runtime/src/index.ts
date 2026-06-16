@@ -6,7 +6,7 @@ import { stdin as input, stdout as output } from "node:process"
 import { createConfig } from "./utils/config"
 import { DeepSeekProvider } from "./provider"
 import { toolHandler } from "./tools"
-import { buildContext, createLLMSummarizer, createFileSystemMemoryStore, createRuntimeMemoryState, createSessionManager, setSessionMemory } from "./memory"
+import { createLLMSummarizer, createFileSystemMemoryStore, createRuntimeMemoryState, createSessionManager, setSessionMemory } from "./memory"
 import type { LLMMessage } from "./types/llm"
 import type { RuntimeEvent } from "./types/event"
 import type { Session } from "./memory/types"
@@ -56,29 +56,16 @@ const sessionManager = createSessionManager(sessionStore)
 // 当前 session（在 main 中初始化）
 let session: Session
 
-async function getContextMessages() {
-	const { contextMessages } = await buildContext({
-		messages,
-		memory,
-		options: { preserveRecentMessages: 2 },
-		summarizer
-	})
-	logContextMessages(contextMessages)
-	return contextMessages
-}
-
-function logContextMessages(contextMessages: LLMMessage[]) {
-	console.log("\n--- contextMessages 发送给模型 ---")
-	console.log(JSON.stringify(contextMessages, null, 2))
-	console.log("--- contextMessages end ---\n")
-}
-
 /**
  * 发送消息到 LLM（ReAct 循环 - 流式输出）
+ * 通过 for await...of 消费 runtime yield 的事件
  */
 async function sendMessageReAct(userInput: string) {
-	// 执行 ReAct 循环，传入 onEvent 回调实现流式输出
-	const result = await executeReActLoop({
+	let loopState: import("./types/react").ReActState | undefined
+	let loopError: Error | undefined
+	let summaryResults: import("./memory/types").SummaryResult[] = []
+
+	for await (const event of executeReActLoop({
 		provider,
 		config,
 		userInput,
@@ -86,42 +73,47 @@ async function sendMessageReAct(userInput: string) {
 		memory,
 		contextOptions: { preserveRecentMessages: 2 },
 		summarizer,
-		sessionId: session.id,
-		onEvent: (event: RuntimeEvent) => {
-			switch (event.type) {
-				case "text-delta":
-					// 逐 token 输出
-					process.stdout.write(event.delta)
-					break
-				case "tool-call-start":
-					console.log(`\n[调用工具: ${event.toolName}]`)
-					break
-				case "iteration-start":
-					if (event.iteration > 0) {
-						console.log(`\n--- 第 ${event.iteration + 1} 轮思考 ---`)
-					}
-					break
-				case "tool-execute":
-					console.log(`  执行: ${event.toolName}...`)
-					break
-				case "tool-result":
-					if (!event.success) {
-						console.log(`  失败: ${event.toolName} - ${event.result}`)
-					}
-					break
-				case "loop-end":
-					// 循环结束，输出换行
-					if (event.reason !== "final_answer") {
-						console.log(`\n(循环结束: ${event.reason}, 共 ${event.iterations} 轮)`)
-					}
-					break
-			}
+		sessionId: session.id
+	})) {
+		switch (event.type) {
+			case "text-delta":
+				// 逐 token 输出
+				process.stdout.write(event.delta)
+				break
+			case "tool-call-start":
+				console.log(`\n[调用工具: ${event.toolName}]`)
+				break
+			case "iteration-start":
+				if (event.iteration > 0) {
+					console.log(`\n--- 第 ${event.iteration + 1} 轮思考 ---`)
+				}
+				break
+			case "tool-execute":
+				console.log(`  执行: ${event.toolName}...`)
+				break
+			case "tool-result":
+				if (!event.success) {
+					console.log(`  失败: ${event.toolName} - ${event.result}`)
+				}
+				break
+			case "loop-end":
+				// 循环结束，输出换行
+				if (event.reason !== "final_answer") {
+					console.log(`\n(循环结束: ${event.reason}, 共 ${event.iterations} 轮)`)
+				}
+				break
+			case "loop-complete":
+				// 提取最终结果
+				loopState = event.state
+				loopError = event.error
+				summaryResults = event.summaryResults
+				break
 		}
-	})
+	}
 
-	// 处理结果
-	if (result.error) {
-		console.error("\nError:", result.error.message)
+	// 处理错误
+	if (loopError) {
+		console.error("\nError:", loopError.message)
 		return
 	}
 
@@ -129,15 +121,17 @@ async function sendMessageReAct(userInput: string) {
 	console.log()
 
 	// 更新全局消息历史（用于下次对话）
-	messages.length = 0
-	messages.push(...result.state.messages)
+	if (loopState) {
+		messages.length = 0
+		messages.push(...loopState.messages)
+	}
 
 	// 持久化 session
 	session.messages = [...messages]
 	// 将摘要结果追加到 session
-	if (result.summaryResults.length > 0) {
-		session.summary.push(...result.summaryResults)
-		for (const sr of result.summaryResults) {
+	if (summaryResults.length > 0) {
+		session.summary.push(...summaryResults)
+		for (const sr of summaryResults) {
 			memory = setSessionMemory(memory, {
 				id: `summary-${sr.createdAt}`,
 				content: `摘要: ${sr.summary}`
@@ -149,17 +143,17 @@ async function sendMessageReAct(userInput: string) {
 				})
 			}
 		}
-		session.facts.push(...result.summaryResults.flatMap(sr => sr.extractedFacts))
+		session.facts.push(...summaryResults.flatMap(sr => sr.extractedFacts))
 	}
 	await sessionManager.save(session)
 
 	// 调试信息
-	if (process.env.DEBUG_REACT === "true") {
+	if (process.env.DEBUG_REACT === "true" && loopState) {
 		console.log("\n--- ReAct 调试信息 ---")
-		console.log(`迭代次数: ${result.state.iteration}`)
-		console.log(`终止原因: ${result.state.terminationReason}`)
-		console.log(`行动次数: ${result.state.actionHistory.length}`)
-		console.log(`观察次数: ${result.state.observationHistory.length}`)
+		console.log(`迭代次数: ${loopState.iteration}`)
+		console.log(`终止原因: ${loopState.terminationReason}`)
+		console.log(`行动次数: ${loopState.actionHistory.length}`)
+		console.log(`观察次数: ${loopState.observationHistory.length}`)
 		console.log("-------------------\n")
 	}
 }
