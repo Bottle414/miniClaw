@@ -1,11 +1,11 @@
 import { LLMToolCall, LLMAssistantMessage } from "../types/llm"
-import type { RuntimeEvent } from "../types/event"
+import type { ProviderEvent } from "../types/event"
 
 /**
- * 将 RuntimeEvent 序列合并为完整的 LLMAssistantMessage
+ * 将 ProviderEvent 序列合并为完整的 LLMAssistantMessage
  * 仅在收到 finish 事件后返回完整消息，否则返回 null
  */
-export function mergeStreamMessage(events: RuntimeEvent[]): LLMAssistantMessage | null {
+export function mergeStreamMessage(events: ProviderEvent[]): LLMAssistantMessage | null {
 	let content = ""
 	const toolCallMap = new Map<string, { name: string; arguments: string }>()
 	let finished = false
@@ -33,7 +33,7 @@ export function mergeStreamMessage(events: RuntimeEvent[]): LLMAssistantMessage 
 			case "finish":
 				finished = true
 				break
-			// tool-result 和 error 不属于 LLM 消息，跳过
+			// error 不属于 LLM 消息，跳过
 		}
 	}
 
@@ -61,8 +61,8 @@ export function createStreamMerger() {
 	let finished = false
 
 	return {
-		/** 推送一个 RuntimeEvent */
-		push(event: RuntimeEvent): void {
+		/** 推送一个 ProviderEvent */
+		push(event: ProviderEvent): void {
 			switch (event.type) {
 				case "text-delta":
 					content += event.delta

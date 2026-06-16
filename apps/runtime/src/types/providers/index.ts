@@ -5,7 +5,7 @@
 
 import { Config } from "../config"
 import type { LLMRequest, LLMResponse } from "../llm"
-import type { RuntimeEvent } from "../event"
+import type { ProviderEvent } from "../event"
 
 // ============== Adapter Interface ==============
 
@@ -44,11 +44,11 @@ export interface LLMAdapter<TProviderRequest = unknown, TProviderResponse = unkn
 	transformResponse(response: TProviderResponse): LLMResponse
 
 	/**
-	 * 将提供商流式 chunk 转换为 Runtime Event
+	 * 将提供商流式 chunk 转换为 Provider Event
 	 * @param chunk 提供商流式 chunk
-	 * @returns RuntimeEvent，或 null 表示跳过无意义 chunk
+	 * @returns ProviderEvent，或 null 表示跳过无意义 chunk
 	 */
-	transformStreamChunk?(chunk: unknown): RuntimeEvent | RuntimeEvent[] | null
+	transformStreamChunk?(chunk: unknown): ProviderEvent | ProviderEvent[] | null
 }
 
 /**
@@ -70,5 +70,5 @@ export interface Provider {
 	/** 发送消息 */
 	chat(req: LLMRequest): Promise<LLMResponse>
 	/** 流式发送消息 */
-	chatStream(req: LLMRequest): AsyncIterable<RuntimeEvent>
+	chatStream(req: LLMRequest): AsyncIterable<ProviderEvent>
 }

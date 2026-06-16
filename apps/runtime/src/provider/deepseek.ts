@@ -5,7 +5,7 @@
 import OpenAI from "openai"
 import type { LLMRequest, LLMResponse } from "../types/llm"
 import type { Provider } from "../types/providers"
-import type { RuntimeEvent } from "../types/event"
+import type { ProviderEvent } from "../types/event"
 import type { Config } from "../types/config"
 import { deepseekAdapter } from "../adaptor/deepseek"
 
@@ -77,9 +77,9 @@ export function DeepSeekProvider(): Provider {
 		/**
 		 * 流式发送聊天请求
 		 * @param req 统一 LLM 请求
-		 * @returns RuntimeEvent 异步迭代器
+		 * @returns ProviderEvent 异步迭代器
 		 */
-		async *chatStream(req: LLMRequest): AsyncIterable<RuntimeEvent> {
+		async *chatStream(req: LLMRequest): AsyncIterable<ProviderEvent> {
 			if (!client) {
 				yield { type: "error", error: new Error("Provider not initialized") }
 				return

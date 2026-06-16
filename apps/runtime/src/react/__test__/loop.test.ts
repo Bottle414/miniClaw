@@ -1,19 +1,19 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
-import { executeReActLoop } from "./loop"
-import type { RuntimeEvent } from "../types/event"
-import type { Provider } from "../types/providers"
-import type { Config } from "../types/config"
-import type { LLMRequest, LLMResponse } from "../types/llm"
+import { executeReActLoop } from "../loop"
+import type { ProviderEvent } from "../../types/event"
+import type { Provider } from "../../types/providers"
+import type { Config } from "../../types/config"
+import type { LLMRequest, LLMResponse } from "../../types/llm"
 
-function createProvider(events: RuntimeEvent[], requests: LLMRequest[]): Provider {
+function createProvider(events: ProviderEvent[], requests: LLMRequest[]): Provider {
 	return {
 		init() {},
 		async chat(): Promise<LLMResponse> {
 			throw new Error("chat should not be called")
 		},
-		async *chatStream(req: LLMRequest): AsyncIterable<RuntimeEvent> {
+		async *chatStream(req: LLMRequest): AsyncIterable<ProviderEvent> {
 			requests.push(req)
 			for (const event of events) {
 				yield event
@@ -45,10 +45,13 @@ test("executeReActLoop sends contextMessages while preserving full ReAct state m
 		}
 	}
 	const requests: LLMRequest[] = []
-	const provider = createProvider([
-		{ type: "text-delta", delta: "done" },
-		{ type: "finish", reason: "stop" }
-	], requests)
+	const provider = createProvider(
+		[
+			{ type: "text-delta", delta: "done" },
+			{ type: "finish", reason: "stop" }
+		],
+		requests
+	)
 
 	const initialMessages = [
 		{ role: "user" as const, content: "old" },
@@ -75,10 +78,7 @@ test("executeReActLoop sends contextMessages while preserving full ReAct state m
 		content: "new task"
 	})
 	assert.equal(summaryRequests.length, 1)
-	assert.deepEqual(result.state.messages.slice(0, 4), [
-		...initialMessages,
-		{ role: "user", content: "new task" }
-	])
+	assert.deepEqual(result.state.messages.slice(0, 4), [...initialMessages, { role: "user", content: "new task" }])
 	assert.deepEqual(result.state.messages.at(-1), {
 		role: "assistant",
 		content: "done",

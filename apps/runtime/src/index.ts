@@ -6,15 +6,12 @@ import { stdin as input, stdout as output } from "node:process"
 import { createConfig } from "./utils/config"
 import { DeepSeekProvider } from "./provider"
 import { toolHandler } from "./tools"
-import { createStreamMerger } from "./utils/message"
-import { createToolMessagesFromProviderCalls } from "./utils/tool-message"
 import { buildContext, createLLMSummarizer, createFileSystemMemoryStore, createRuntimeMemoryState, createSessionManager, setSessionMemory } from "./memory"
 import type { LLMMessage } from "./types/llm"
 import type { RuntimeEvent } from "./types/event"
-import type { ReActEvent } from "./types/react"
 import type { Session } from "./memory/types"
-import { getDotenvConfig } from "./utils/dotenv"
 import { executeReActLoop } from "./react/loop"
+import { getDotenvConfig } from "./utils/dotenv"
 
 // 加载环境变量
 dotenv.config(getDotenvConfig())
@@ -31,9 +28,6 @@ const rl = readline.createInterface({
 	input,
 	output
 })
-
-// 功能开关：是否使用 ReAct 循环
-const USE_REACT_LOOP = process.env.USE_REACT_LOOP !== "false" // 默认启用
 
 // 初始化消息历史（包含系统提示）
 const messages: LLMMessage[] = [
@@ -80,135 +74,7 @@ function logContextMessages(contextMessages: LLMMessage[]) {
 }
 
 /**
- * 发送消息到 LLM（旧循环 - 作为回退）
- */
-async function sendMessageLegacy() {
-	// 获取工具定义
-	const tools = toolHandler.getToolDefinitions()
-
-	// 构造请求
-	const contextMessages = await getContextMessages()
-	const response = await provider.chat({
-		messages: contextMessages,
-		model: config.model,
-		tools
-	})
-
-	// 获取响应消息
-	const { message } = response
-
-	if (!message) {
-		console.log("\nAssistant: (无响应)")
-		return
-	}
-
-	// 将助手消息添加到历史
-	messages.push(message)
-
-	// 处理工具调用
-	if (message.toolCalls && message.toolCalls.length > 0) {
-		console.log("\nAssistant: 调用工具...")
-
-		// 使用工具消息工具处理工具调用
-		const toolMessages = await createToolMessagesFromProviderCalls({
-			tool_calls: message.toolCalls.map((tc) => ({
-				id: tc.id,
-				type: "function" as const,
-				function: {
-					name: tc.name,
-					arguments: tc.arguments
-				}
-			}))
-		}, session.id)
-
-		if (toolMessages && toolMessages.length > 0) {
-			// 添加工具消息到历史
-			messages.push(...toolMessages)
-
-			// 递归调用以获取最终回复
-			return sendMessageLegacy()
-		}
-	}
-
-	// 输出文本回复
-	if (message.content) {
-		console.log("\nAssistant:")
-		console.log(message.content)
-	}
-}
-
-/**
- * 流式发送消息到 LLM（旧循环 - 流式版本）
- */
-async function sendMessageLegacyStream() {
-	// 获取工具定义
-	const tools = toolHandler.getToolDefinitions()
-
-	// 创建流式合并器
-	const merger = createStreamMerger()
-
-	// 流式请求
-	console.log("\nAssistant: ")
-
-	const contextMessages = await getContextMessages()
-	for await (const event of provider.chatStream({
-		messages: contextMessages,
-		model: config.model,
-		tools
-	})) {
-		switch (event.type) {
-			case "text-delta":
-				// 直接输出文本增量
-				process.stdout.write(event.delta)
-				break
-			case "tool-call-start":
-				console.log(`\n[调用工具: ${event.toolName}]`)
-				break
-			case "error":
-				console.error("\nError:", event.error.message)
-				return
-		}
-
-		// 推送到合并器
-		merger.push(event)
-	}
-
-	// 获取完整消息
-	const message = merger.getMessage()
-	if (!message) {
-		console.log("\n(流式响应未完成)")
-		return
-	}
-
-	// 将助手消息添加到历史
-	messages.push(message)
-
-	// 处理工具调用
-	if (message.toolCalls && message.toolCalls.length > 0) {
-		// 使用工具消息工具处理工具调用
-		const toolMessages = await createToolMessagesFromProviderCalls({
-			tool_calls: message.toolCalls.map((tc) => ({
-				id: tc.id,
-				type: "function" as const,
-				function: {
-					name: tc.name,
-					arguments: tc.arguments
-				}
-			}))
-		}, session.id)
-
-		if (toolMessages && toolMessages.length > 0) {
-			// 添加工具消息到历史
-			messages.push(...toolMessages)
-
-			// 递归调用以获取最终回复
-			return sendMessageLegacyStream()
-		}
-	}
-}
-
-/**
- * 发送消息到 LLM（新 ReAct 循环 - 流式输出）
+ * 发送消息到 LLM（ReAct 循环 - 流式输出）
  */
 async function sendMessageReAct(userInput: string) {
 	// 执行 ReAct 循环，传入 onEvent 回调实现流式输出
@@ -221,7 +87,7 @@ async function sendMessageReAct(userInput: string) {
 		contextOptions: { preserveRecentMessages: 2 },
 		summarizer,
 		sessionId: session.id,
-		onEvent: (event: ReActEvent) => {
+		onEvent: (event: RuntimeEvent) => {
 			switch (event.type) {
 				case "text-delta":
 					// 逐 token 输出
@@ -230,20 +96,20 @@ async function sendMessageReAct(userInput: string) {
 				case "tool-call-start":
 					console.log(`\n[调用工具: ${event.toolName}]`)
 					break
-				case "react-iteration-start":
+				case "iteration-start":
 					if (event.iteration > 0) {
 						console.log(`\n--- 第 ${event.iteration + 1} 轮思考 ---`)
 					}
 					break
-				case "react-tool-execute":
+				case "tool-execute":
 					console.log(`  执行: ${event.toolName}...`)
 					break
-				case "react-tool-result":
+				case "tool-result":
 					if (!event.success) {
 						console.log(`  失败: ${event.toolName} - ${event.result}`)
 					}
 					break
-				case "react-loop-end":
+				case "loop-end":
 					// 循环结束，输出换行
 					if (event.reason !== "final_answer") {
 						console.log(`\n(循环结束: ${event.reason}, 共 ${event.iterations} 轮)`)
@@ -302,8 +168,7 @@ async function sendMessageReAct(userInput: string) {
  * 主循环
  */
 async function main() {
-	const streamMode = config.stream
-	console.log(`\n使用 ${USE_REACT_LOOP ? "ReAct 循环" : "旧循环（回退）"} 模式${streamMode ? " [流式]" : ""}\n`)
+	console.log(`\n使用 ReAct 循环模式 [流式]\n`)
 
 	// 加载或创建 session
 	const sessionId = process.env.SESSION_ID
@@ -350,21 +215,7 @@ async function main() {
 			process.exit(0)
 		}
 
-		if (USE_REACT_LOOP) {
-			// 使用 ReAct 循环
-			await sendMessageReAct(userInput)
-		} else {
-			// 使用旧循环（回退）
-			messages.push({
-				role: "user",
-				content: userInput
-			})
-			if (streamMode) {
-				await sendMessageLegacyStream()
-			} else {
-				await sendMessageLegacy()
-			}
-		}
+		await sendMessageReAct(userInput)
 	}
 }
 

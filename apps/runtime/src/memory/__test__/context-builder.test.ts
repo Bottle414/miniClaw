@@ -1,9 +1,9 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
-import { buildContext, createRuntimeMemoryState, setSessionMemory, setWorkingMemory } from "./index"
-import type { LLMMessage } from "../types/llm"
-import type { SummaryResult, Summarizer } from "./types"
+import { buildContext, createRuntimeMemoryState, setSessionMemory, setWorkingMemory } from "../index"
+import type { LLMMessage } from "../../types/llm"
+import type { SummaryResult, Summarizer } from "../types"
 
 function createSummaryResult(summary: string, extractedFacts: SummaryResult["extractedFacts"] = []): SummaryResult {
 	return {
@@ -87,9 +87,7 @@ test("buildContext renders summary and fact messages in stable order", async () 
 	]
 	const summarizer: Summarizer = {
 		async summarize() {
-			return createSummaryResult("用户偏好简洁回答", [
-				{ category: "user-preference", content: "用户偏好简洁回答", source: "message 2" }
-			])
+			return createSummaryResult("用户偏好简洁回答", [{ category: "user-preference", content: "用户偏好简洁回答", source: "message 2" }])
 		}
 	}
 

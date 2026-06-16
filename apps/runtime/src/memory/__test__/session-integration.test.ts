@@ -3,10 +3,9 @@ import test from "node:test"
 import { mkdtemp, rm } from "node:fs/promises"
 import path from "node:path"
 
-import { createFileSystemMemoryStore } from "./file-store"
-import { createSessionManager } from "./session-manager"
-import { createRuntimeMemoryState, setSessionMemory } from "./store"
-import type { Session } from "./types"
+import { createFileSystemMemoryStore } from "../file-store"
+import { createSessionManager } from "../session-manager"
+import { createRuntimeMemoryState, setSessionMemory } from "../store"
 
 /** 模拟 Runtime 启动时的 session 恢复流程。 */
 test("session round-trip: create → save messages → load → inject to runtime", async () => {
@@ -19,10 +18,7 @@ test("session round-trip: create → save messages → load → inject to runtim
 		const session = await manager.create({ id: "rt-test", name: "Runtime Test" })
 
 		// 2. 模拟对话后更新 messages
-		session.messages.push(
-			{ role: "user", content: "hello" },
-			{ role: "assistant", content: "hi there" }
-		)
+		session.messages.push({ role: "user", content: "hello" }, { role: "assistant", content: "hi there" })
 		session.summary.push({
 			summary: "用户打招呼",
 			extractedFacts: [{ category: "user-preference", content: "用户偏好中文" }],
@@ -57,10 +53,10 @@ test("session round-trip: create → save messages → load → inject to runtim
 		}
 
 		// 验证 session memory 包含注入的 summary 和 facts
-		const sessionEntries = memory.session.entries.filter(e => e.active)
+		const sessionEntries = memory.session.entries.filter((e) => e.active)
 		assert.equal(sessionEntries.length, 2)
-		assert.ok(sessionEntries.some(e => e.content.includes("摘要")))
-		assert.ok(sessionEntries.some(e => e.content.includes("事实")))
+		assert.ok(sessionEntries.some((e) => e.content.includes("摘要")))
+		assert.ok(sessionEntries.some((e) => e.content.includes("事实")))
 	} finally {
 		await rm(dir, { recursive: true, force: true })
 	}

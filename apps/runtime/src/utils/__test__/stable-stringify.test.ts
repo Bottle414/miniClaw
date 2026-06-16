@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
-import { stableStringify } from "./stable-stringify"
+import { stableStringify } from "../stable-stringify"
 
 test("stableStringify: key order does not affect output", () => {
 	const a = stableStringify({ a: 1, b: 2 })

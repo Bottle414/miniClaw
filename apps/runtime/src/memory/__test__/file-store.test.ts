@@ -4,8 +4,8 @@ import { promises as fs } from "node:fs"
 import path from "node:path"
 import { mkdtemp, rm } from "node:fs/promises"
 
-import { createFileSystemMemoryStore } from "./file-store"
-import type { SessionData, SessionMetadata } from "./types"
+import { createFileSystemMemoryStore } from "../file-store"
+import type { SessionData } from "../types"
 
 async function createTempDir(): Promise<string> {
 	return mkdtemp(path.join(process.cwd(), ".test-sessions-"))

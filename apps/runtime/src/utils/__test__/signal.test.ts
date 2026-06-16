@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
-import { anySignal } from "./signal"
+import { anySignal } from "../signal"
 
 test("anySignal: returns a signal that aborts when any input signal aborts", () => {
 	const c1 = new AbortController()

@@ -27,7 +27,7 @@ import type {
 	DeepSeekToolCallResponse,
 	DeepSeekChatCompletionChunk
 } from "../../types/providers/deepseek"
-import type { RuntimeEvent } from "../../types/event"
+import type { ProviderEvent } from "../../types/event"
 import { logger } from "../../utils/logger"
 
 /**
@@ -73,7 +73,7 @@ export const deepseekAdapter: LLMAdapter<DeepSeekChatCompletionRequest, DeepSeek
 	 * 将 DeepSeek 流式 chunk 转换为 Runtime Event
 	 * 单个 chunk 可能产出多个事件（如同时包含文本增量和工具调用开始）
 	 */
-	transformStreamChunk(chunk: unknown): RuntimeEvent | RuntimeEvent[] | null {
+	transformStreamChunk(chunk: unknown): ProviderEvent | ProviderEvent[] | null {
 		const dsChunk = chunk as DeepSeekChatCompletionChunk
 		const choice = dsChunk.choices?.[0]
 		if (!choice) return null
@@ -90,7 +90,7 @@ export const deepseekAdapter: LLMAdapter<DeepSeekChatCompletionRequest, DeepSeek
 			}
 		}
 
-		const events: RuntimeEvent[] = []
+		const events: ProviderEvent[] = []
 
 		// 文本增量
 		if (delta.content) {

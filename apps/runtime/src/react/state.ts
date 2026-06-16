@@ -7,9 +7,9 @@
 import type {
 	ReActState,
 	ReActStateUpdate,
-	ReActPhase
+	RuntimePhase
 } from "../types/react"
-import { isValidReActPhase } from "../types/react"
+import { isValidRuntimePhase } from "../types/react"
 
 /**
  * 创建初始 ReAct 状态
@@ -40,7 +40,7 @@ export function updateState(
 	update: ReActStateUpdate
 ): ReActState {
 	// 验证阶段更新
-	if (update.phase !== undefined && !isValidReActPhase(update.phase)) {
+	if (update.phase !== undefined && !isValidRuntimePhase(update.phase)) {
 		throw new Error(`Invalid ReAct phase: ${update.phase}`)
 	}
 
@@ -69,7 +69,7 @@ export function getIteration(state: ReActState): number {
 /**
  * 获取当前阶段
  */
-export function getPhase(state: ReActState): ReActPhase {
+export function getPhase(state: ReActState): RuntimePhase {
 	return state.phase
 }
 
@@ -122,11 +122,11 @@ export function getTerminationReason(
  * @returns 是否为合法转换
  */
 export function isValidPhaseTransition(
-	from: ReActPhase,
-	to: ReActPhase
+	from: RuntimePhase,
+	to: RuntimePhase
 ): boolean {
 	// 定义合法的阶段转换
-	const validTransitions: Record<ReActPhase, ReActPhase[]> = {
+	const validTransitions: Record<RuntimePhase, RuntimePhase[]> = {
 		thinking: ["acting"],
 		acting: ["observing", "deciding"],
 		observing: ["deciding"],
@@ -184,7 +184,7 @@ export function incrementIteration(state: ReActState): ReActState {
 /**
  * 设置阶段
  */
-export function setPhase(state: ReActState, phase: ReActPhase): ReActState {
+export function setPhase(state: ReActState, phase: RuntimePhase): ReActState {
 	return updateState(state, { phase })
 }
 

@@ -5,7 +5,7 @@
  */
 
 import type { LLMMessage } from "../llm/message"
-import type { ReActPhase } from "./phase"
+import type { RuntimePhase } from "./phase"
 import type { ActionHistory } from "./action"
 import type { ObservationHistory } from "./observation"
 import type { TerminationReason } from "./termination"
@@ -20,7 +20,7 @@ export interface ReActState {
 	iteration: number
 
 	/** 当前阶段 */
-	phase: ReActPhase
+	phase: RuntimePhase
 
 	/** 消息历史 */
 	messages: LLMMessage[]
