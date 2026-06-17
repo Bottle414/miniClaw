@@ -18,7 +18,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
 	return (
 		<div className={`chat-message ${message.role}`}>
 			<div className="message-avatar">
-				{isAssistant ? "AI" : "You"}
+				{isAssistant ? "AI" : "U"}
 			</div>
 			<div className="message-content">
 				{message.segments.map((segment, i) => (

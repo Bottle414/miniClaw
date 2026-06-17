@@ -1,7 +1,7 @@
 /**
  * 聊天输入组件
  *
- * 输入框 + 发送按钮，Enter 提交，空消息拦截
+ * 药丸形输入框 + 圆形发送按钮，Enter 提交，空消息拦截
  */
 
 import { useState } from "react"
@@ -35,11 +35,14 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
 				value={input}
 				onChange={(e) => setInput(e.target.value)}
 				onKeyDown={handleKeyDown}
-				placeholder="Type a message..."
+				placeholder="Send a message..."
 				disabled={disabled}
 			/>
-			<button onClick={handleSubmit} disabled={disabled || !input.trim()}>
-				Send
+			<button onClick={handleSubmit} disabled={disabled || !input.trim()} aria-label="Send">
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+					<line x1="12" y1="19" x2="12" y2="5" />
+					<polyline points="5 12 12 5 19 12" />
+				</svg>
 			</button>
 		</div>
 	)
