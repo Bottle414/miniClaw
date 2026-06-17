@@ -1,25 +1,32 @@
 /**
  * 配置管理工具
- * 负责从环境变量创建和验证配置
+ * 负责创建和验证配置
  */
 
 import type { Config } from "../types/config"
 import { getSystemPrompt } from "../prompts/system"
-// import { getSoulPrompt } from "../prompts/soul"
+
+/** createConfig 选项，所有字段由调用方显式传入。 */
+export interface CreateConfigOptions {
+	apiKey: string
+	baseUrl?: string
+	model?: string
+	soulPrompt?: string
+}
 
 /**
- * 从环境变量创建完整配置
- * @param env 环境变量对象（通常为 process.env）
+ * 创建完整配置
+ * @param options 配置选项
  * @returns 合并后的完整配置
- * @throws 如果缺少必要的环境变量或格式无效
+ * @throws 如果缺少必要字段或格式无效
  */
-export function createConfig(env: NodeJS.ProcessEnv): Config {
+export function createConfig(options: CreateConfigOptions): Config {
 	// 校验必要字段
-	validateApiKey(env.API_KEY)
+	validateApiKey(options.apiKey)
 
 	// 校验可选字段的格式
-	if (env.DEEPSEEK_BASE_URL) {
-		validateBaseUrl(env.DEEPSEEK_BASE_URL)
+	if (options.baseUrl) {
+		validateBaseUrl(options.baseUrl)
 	}
 
 	// 合并 RuntimeConfig 和 TaskConfig
@@ -31,10 +38,10 @@ export function createConfig(env: NodeJS.ProcessEnv): Config {
 		maxSendRetryTimes: 3,
 
 		// TaskConfig
-		baseURL: env.DEEPSEEK_BASE_URL || "https://api.deepseek.com",
-		apiKey: env.API_KEY!,
-		model: env.DEEPSEEK_MODEL || "deepseek-chat",
-		// soulPrompt: getSoulPrompt(),
+		baseURL: options.baseUrl || "https://api.deepseek.com",
+		apiKey: options.apiKey,
+		model: options.model || "deepseek-chat",
+		soulPrompt: options.soulPrompt,
 		userPrompt: "",
 		stream: true
 	}
@@ -47,13 +54,9 @@ export function createConfig(env: NodeJS.ProcessEnv): Config {
  * @param apiKey API Key 值
  * @throws 如果 API Key 为空或仅包含空白字符
  */
-function validateApiKey(apiKey: string | undefined): void {
-	if (!apiKey) {
-		throw new Error("缺少必要的环境变量: API_KEY")
-	}
-
+function validateApiKey(apiKey: string): void {
 	if (apiKey.trim().length === 0) {
-		throw new Error("API_KEY 不能为空或仅包含空白字符")
+		throw new Error("apiKey 不能为空或仅包含空白字符")
 	}
 }
 
@@ -66,6 +69,6 @@ function validateBaseUrl(baseUrl: string): void {
 	try {
 		new URL(baseUrl)
 	} catch {
-		throw new Error(`DEEPSEEK_BASE_URL 不是有效的 URL: ${baseUrl}`)
+		throw new Error(`baseUrl 不是有效的 URL: ${baseUrl}`)
 	}
 }

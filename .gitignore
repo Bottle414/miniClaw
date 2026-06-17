@@ -30,4 +30,4 @@ pnpm-debug.log*
 coverage/
 
 # chat data
-apps/runtime/.sessions/
+**/.sessions/**

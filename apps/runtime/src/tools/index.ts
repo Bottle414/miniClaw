@@ -27,6 +27,9 @@ const defaultMetadata: ToolMetadata = {
 	dangerous: false
 }
 
+/** 工具处理器类型 */
+export type ToolHandler = ReturnType<typeof createToolHandler>
+
 /**
  * 创建工具处理器
  * 统一注册和调用工具，支持中间件链
@@ -120,9 +123,4 @@ export function createToolHandler(middlewares?: ToolMiddleware[], sessionsRoot?:
 	}
 }
 
-/** 全局工具处理器实例 */
-export const toolHandler = createToolHandler(undefined, process.env.SESSIONS_ROOT || path.join(process.cwd(), ".sessions"))
-
-// ============== 注册工具 ==============
-
-toolHandler.register(weatherGetWeather.definition, weatherGetWeather.executor, weatherGetWeather.metadata)
+// 工具注册由 createRuntime 中的实例完成

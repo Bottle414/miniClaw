@@ -10,9 +10,9 @@ import type { LLMMessage, LLMUserMessage, LLMAssistantMessage, LLMToolMessage } 
 import type { ReActState, ActionRecord, ObservationRecord } from "../types/react"
 import type { RuntimeEvent } from "../types/event"
 import type { Config } from "../types/config"
-import { createInitialState, updateState, addMessage, addAction, addObservation, incrementIteration, setPhase, markTermination } from "./state"
-import { shouldTerminate, checkFinalAnswer, createErrorTermination } from "./terminator"
-import { toolHandler } from "../tools"
+import type { ToolHandler } from "../tools"
+import { createInitialState, addMessage, addAction, addObservation, incrementIteration, setPhase, markTermination } from "./state"
+import { shouldTerminate } from "./terminator"
 import { createStreamMerger } from "../utils/message"
 import { buildContext, createRuntimeMemoryState } from "../memory"
 import type { RuntimeMemoryState, ContextBuilderOptions, Summarizer, SummaryResult } from "../memory"
@@ -37,6 +37,8 @@ export interface ReActLoopConfig {
 	summarizer?: Summarizer
 	/** 会话 ID（用于工具调用日志和指标持久化） */
 	sessionId?: string
+	/** 工具处理器实例 */
+	toolHandler: ToolHandler
 }
 
 /**
@@ -92,16 +94,7 @@ interface DecidePhaseResult {
  * 通过 AsyncIterable yield RuntimeEvent，消费者 for await...of 拉取
  */
 export async function* executeReActLoop(loopConfig: ReActLoopConfig): AsyncIterable<RuntimeEvent> {
-	const {
-		provider,
-		config,
-		userInput,
-		initialMessages = [],
-		memory = createRuntimeMemoryState(),
-		contextOptions,
-		summarizer,
-		sessionId
-	} = loopConfig
+	const { provider, config, userInput, initialMessages = [], memory = createRuntimeMemoryState(), contextOptions, summarizer, sessionId, toolHandler } = loopConfig
 
 	// 初始化状态
 	let state = createInitialState()
@@ -133,7 +126,7 @@ export async function* executeReActLoop(loopConfig: ReActLoopConfig): AsyncItera
 			}
 
 			// Act 阶段（实时 yield ProviderEvent）
-			const actResult = yield* executeActPhase(state, provider, config, memory, contextOptions, summarizer)
+			const actResult = yield* executeActPhase(state, provider, config, memory, contextOptions, summarizer, toolHandler)
 			state = actResult.state
 			if (actResult.summaryResult) {
 				summaryResults.push(actResult.summaryResult)
@@ -149,7 +142,7 @@ export async function* executeReActLoop(loopConfig: ReActLoopConfig): AsyncItera
 
 			// Observe 阶段（如果有工具调用）
 			if (actResult.hasToolCalls) {
-				const observeResult = await executeObservePhase(state, actResult.toolCalls!, sessionId)
+				const observeResult = await executeObservePhase(state, actResult.toolCalls!, sessionId, toolHandler)
 				state = observeResult.state
 				for (const event of observeResult.events) {
 					yield event
@@ -237,10 +230,11 @@ async function* executeActPhase(
 	config: Config,
 	memory: RuntimeMemoryState,
 	contextOptions?: ContextBuilderOptions,
-	summarizer?: Summarizer
+	summarizer?: Summarizer,
+	toolHandler?: ToolHandler
 ): AsyncGenerator<RuntimeEvent, ActPhaseResult> {
 	// 获取工具定义
-	const tools = toolHandler.getToolDefinitions()
+	const tools = toolHandler?.getToolDefinitions()
 
 	// 创建流式合并器
 	const merger = createStreamMerger()
@@ -299,7 +293,8 @@ async function* executeActPhase(
 async function executeObservePhase(
 	state: ReActState,
 	toolCalls: NonNullable<LLMAssistantMessage["toolCalls"]>,
-	sessionId?: string
+	sessionId?: string,
+	toolHandler?: ToolHandler
 ): Promise<ObservePhaseResult> {
 	const events: RuntimeEvent[] = []
 
@@ -331,7 +326,7 @@ async function executeObservePhase(
 
 		try {
 			const params = JSON.parse(argsStr || "{}")
-			const toolResult = await toolHandler.call(name, params, sessionId)
+			const toolResult = await toolHandler!.call(name, params, sessionId)
 			if (toolResult.error) {
 				success = false
 				error = `${toolResult.error.code}: ${toolResult.error.message}`

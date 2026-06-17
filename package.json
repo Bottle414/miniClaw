@@ -5,14 +5,16 @@
   "description": "mini OpenClaw - Monorepo",
   "scripts": {
     "dev:runtime": "pnpm --filter @mini-claw/runtime dev",
+    "dev:tui": "pnpm --filter @mini-claw/tui dev",
     "dev:web": "pnpm --filter @mini-claw/web dev",
-    "dev": "pnpm run dev:runtime",
+    "dev": "pnpm run dev:tui",
     "build:runtime": "pnpm --filter @mini-claw/runtime build",
+    "build:tui": "pnpm --filter @mini-claw/tui build",
     "build:web": "pnpm --filter @mini-claw/web build",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "clean": "pnpm -r exec rm -rf node_modules dist",
-    "chat": "pnpm --filter @mini-claw/runtime chat"
+    "chat": "pnpm --filter @mini-claw/tui chat"
   },
   "author": "Bottle414",
   "license": "ISC",

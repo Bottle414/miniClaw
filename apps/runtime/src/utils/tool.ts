@@ -1,7 +1,7 @@
-import { toolHandler } from "../tools"
-import { LLMToolCall, LLMToolMessage } from "../types/llm"
+import type { ToolHandler } from "../tools"
+import type { LLMToolCall, LLMToolMessage } from "../types/llm"
 
-export async function useTool(tools: LLMToolCall[], sessionId?: string): Promise<LLMToolMessage[]> {
+export async function useTool(toolHandler: ToolHandler, tools: LLMToolCall[], sessionId?: string): Promise<LLMToolMessage[]> {
 	const results = await Promise.all(
 		tools.map(async (tool) => {
 			const { id, name, arguments: toolParams } = tool

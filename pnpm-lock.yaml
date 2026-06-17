@@ -17,12 +17,28 @@ importers:
 
   apps/runtime:
     dependencies:
-      dotenv:
-        specifier: ^17.4.2
-        version: 17.4.2
       openai:
         specifier: ^6.42.0
         version: 6.42.0(zod@4.4.3)
+    devDependencies:
+      '@types/node':
+        specifier: ^25.9.2
+        version: 25.9.2
+      tsx:
+        specifier: ^4.22.4
+        version: 4.22.4
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
+  apps/tui:
+    dependencies:
+      '@mini-claw/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+      dotenv:
+        specifier: ^17.4.2
+        version: 17.4.2
     devDependencies:
       '@types/node':
         specifier: ^25.9.2

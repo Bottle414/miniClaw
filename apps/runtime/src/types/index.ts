@@ -19,3 +19,6 @@ export * from "./react"
 
 // Runtime Event 类型
 export * from "./event"
+
+// Runtime 工厂类型
+export * from "./runtime"

@@ -1,17 +1,21 @@
 {
-  "name": "@mini-claw/runtime",
+  "name": "@mini-claw/tui",
   "version": "1.0.0",
-  "description": "miniClaw Agent Runtime",
+  "description": "miniClaw Terminal UI",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
   "scripts": {
-    "build": "tsc"
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "chat": "tsx src/index.ts"
   },
   "author": "Bottle414",
   "license": "ISC",
   "dependencies": {
-    "openai": "^6.42.0"
+    "@mini-claw/runtime": "workspace:*",
+    "dotenv": "^17.4.2"
   },
   "devDependencies": {
     "@types/node": "^25.9.2",
