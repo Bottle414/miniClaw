@@ -6,6 +6,8 @@
   "scripts": {
     "dev:runtime": "pnpm --filter @mini-claw/runtime dev",
     "dev:tui": "pnpm --filter @mini-claw/tui dev",
+    "dev:server": "pnpm --filter @mini-claw/server dev",
+    "dev:all": "pnpm run dev:server & pnpm run dev:web",
     "dev:web": "pnpm --filter @mini-claw/web dev",
     "dev": "pnpm run dev:tui",
     "build:runtime": "pnpm --filter @mini-claw/runtime build",
