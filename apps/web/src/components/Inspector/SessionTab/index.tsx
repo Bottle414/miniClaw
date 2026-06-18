@@ -1,10 +1,11 @@
 /**
  * SessionTab 组件
  *
- * 展示 Session 元信息：ID、Created At、Updated At、Message Count
+ * 展示 Session 元信息：ID、Name、Created At、Updated At、Message Count
  */
 
 import { useEffect, useState } from "react"
+import dayjs from "dayjs"
 
 import { useChatStore } from "../../../stores/chat-store"
 import type { SessionDetail } from "../../../types/runtime"
@@ -59,11 +60,11 @@ export function SessionTab() {
 			</div>
 			<div className={styles.row}>
 				<span className={styles.label}>Created At</span>
-				<span className={styles.value}>{formatTimestamp(detail.createdAt)}</span>
+				<span className={styles.value}>{dayjs(detail.createdAt).format("YYYY-MM-DD HH:mm:ss")}</span>
 			</div>
 			<div className={styles.row}>
 				<span className={styles.label}>Updated At</span>
-				<span className={styles.value}>{formatTimestamp(detail.updatedAt)}</span>
+				<span className={styles.value}>{dayjs(detail.updatedAt).format("YYYY-MM-DD HH:mm:ss")}</span>
 			</div>
 			<div className={styles.row}>
 				<span className={styles.label}>Message Count</span>
@@ -71,12 +72,4 @@ export function SessionTab() {
 			</div>
 		</div>
 	)
-}
-
-function formatTimestamp(ts: string): string {
-	try {
-		return new Date(ts).toLocaleString("zh-CN")
-	} catch {
-		return ts
-	}
 }

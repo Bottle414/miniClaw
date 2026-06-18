@@ -5,6 +5,7 @@
  */
 
 import { DeleteOutlined } from "@ant-design/icons"
+import dayjs from "dayjs"
 
 import type { ChatSession } from "../../../types/session"
 import styles from "./index.module.css"
@@ -21,13 +22,7 @@ interface SessionListProps {
 }
 
 function formatTime(timestamp: number): string {
-	const date = new Date(timestamp)
-	const now = new Date()
-	const isToday = date.toDateString() === now.toDateString()
-	if (isToday) {
-		return date.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
-	}
-	return date.toLocaleDateString("zh-CN", { month: "short", day: "numeric" })
+	return dayjs(timestamp).format("YYYY-MM-DD HH:mm:ss")
 }
 
 export function SessionList({ sessions, activeId, onSelect, onDelete }: SessionListProps) {

@@ -20,12 +20,18 @@ export type SSERuntimeEvent =
  *
  * 通过 fetch POST 连接 /api/chat，解析 SSE 文本流，
  * 逐事件 yield 给调用方
+ *
+ * @param message 用户消息内容
+ * @param sessionId 当前会话 ID，服务端用于持久化到对应 session
  */
-export async function* streamChat(message: string): AsyncGenerator<SSERuntimeEvent> {
+export async function* streamChat(message: string, sessionId?: string): AsyncGenerator<SSERuntimeEvent> {
+	const body: Record<string, string> = { message }
+	if (sessionId) body.sessionId = sessionId
+
 	const response = await fetch("/api/chat", {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({ message })
+		body: JSON.stringify(body)
 	})
 
 	if (!response.ok) {

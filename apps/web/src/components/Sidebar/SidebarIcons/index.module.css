@@ -64,8 +64,6 @@
   flex-shrink: 0;
 }
 
-:global {
-  .ant-modal-container {
-    min-height: 400px;
-  }
+:global(.ant-modal-container) {
+  min-height: 400px;
 }

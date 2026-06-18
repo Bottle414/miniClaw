@@ -4,6 +4,9 @@
  * 三栏布局：左侧 Sidebar + 中间 Chat + 右侧 Inspector
  */
 
+import { useEffect } from "react"
+
+import { useChatStore } from "../../stores/chat-store"
 import { useUIStore } from "../../stores/ui-store"
 import { Sidebar } from "../Sidebar"
 import { Chat } from "../Chat"
@@ -12,6 +15,11 @@ import styles from "./index.module.css"
 
 function Layout() {
 	const { sidebarOpen, inspectorOpen } = useUIStore()
+	const { loadSessions, initialized } = useChatStore()
+
+	useEffect(() => {
+		if (!initialized) loadSessions()
+	}, [initialized, loadSessions])
 
 	return (
 		<div className={styles.container}>

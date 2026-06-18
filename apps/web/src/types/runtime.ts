@@ -37,19 +37,15 @@ export interface RuntimeEventData {
   [key: string]: unknown
 }
 
-/** Session 详情（从 API 获取） */
+/** Session 完整信息（从 GET /api/session/:id 获取） */
 export interface SessionDetail {
   id: string
   name: string
-  createdAt: string
-  updatedAt: string
-  messageCount: number
-}
-
-/** Memory 状态（从 API 获取） */
-export interface MemoryState {
-  summaries: Array<{ summary: string; createdAt: string }>
+  createdAt: number
+  updatedAt: number
+  messages: Array<{ role: string; content: string }>
+  summary: Array<{ summary: string; createdAt: number }>
   facts: Array<{ category: string; content: string }>
-  contextMessagesCount: number
   canonicalMessagesCount: number
+  contextMessagesCount: number
 }

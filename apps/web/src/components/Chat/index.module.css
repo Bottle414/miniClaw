@@ -1,10 +1,9 @@
 .chatContainer {
+  position: relative;
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 800px;
   height: 100%;
-  margin: 0 auto;
   background: var(--bg-white);
 }
 

@@ -3,12 +3,13 @@
   overflow-y: auto;
   padding: 28px 20px;
   scroll-behavior: smooth;
+  margin-bottom: 50px;
 }
 
 .empty {
   text-align: center;
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: 20px;
   padding-top: 40vh;
   opacity: 0.6;
 }

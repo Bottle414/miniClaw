@@ -1,7 +1,10 @@
 .inputArea {
   display: flex;
+  position: sticky;
+  bottom: 50px;
+  width: 100%;
   gap: 8px;
-  padding: 16px 20px;
+  padding: 20px 20px;
   border-top: 1px solid var(--border);
   background: var(--bg-white);
   flex-shrink: 0;
