@@ -6,7 +6,7 @@
  */
 
 import type { Config } from "./config"
-import type { ContextBuilderOptions, SessionCreateOptions, Session } from "../memory/types"
+import type { ContextBuilderOptions, SessionCreateOptions, Session, SessionMetadata } from "../memory/types"
 import type { RuntimeEvent } from "./event"
 
 /** Session 管理器接口，由 createSessionManager 返回。 */
@@ -15,6 +15,7 @@ interface SessionManager {
 	load(sessionId: string): Promise<Session | null>
 	save(session: Session): Promise<void>
 	delete(sessionId: string): Promise<void>
+	list(): Promise<SessionMetadata[]>
 }
 
 /** createRuntime 工厂选项。所有配置由调用方显式传入，不依赖 process.env。 */

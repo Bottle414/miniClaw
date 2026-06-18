@@ -73,6 +73,23 @@ export function createFileSystemMemoryStore(sessionsRoot: string) {
 			} catch {
 				return false
 			}
+		},
+
+		/** 列出所有 session 的元数据。 */
+		async list(): Promise<SessionData["metadata"][]> {
+			try {
+				const entries = await fs.readdir(sessionsRoot)
+				const results: SessionData["metadata"][] = []
+				for (const entry of entries) {
+					const stat = await fs.stat(path.join(sessionsRoot, entry))
+					if (!stat.isDirectory()) continue
+					const metadata = await readJson<SessionData["metadata"]>(metadataPath(entry))
+					if (metadata) results.push(metadata)
+				}
+				return results
+			} catch {
+				return []
+			}
 		}
 	}
 }

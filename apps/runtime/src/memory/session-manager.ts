@@ -70,6 +70,12 @@ export function createSessionManager(store: MemoryStore, now: () => number = () 
 		/** 删除 session 及其所有持久化数据。 */
 		async delete(sessionId: string): Promise<void> {
 			await store.delete(sessionId)
+		},
+
+		/** 列出所有 session 的元数据。 */
+		async list(): Promise<SessionMetadata[]> {
+			if (!store.list) return []
+			return store.list()
 		}
 	}
 }

@@ -161,6 +161,8 @@ export interface MemoryStore {
 	delete(sessionId: string): Promise<void>
 	/** 检查 session 是否存在。 */
 	exists(sessionId: string): Promise<boolean>
+	/** 列出所有 session 的元数据（可选）。 */
+	list?: () => Promise<SessionMetadata[]>
 }
 
 /** SessionManager 创建选项。 */

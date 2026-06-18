@@ -8,7 +8,7 @@ export type { RuntimeOptions, Runtime, ChatOptions } from "./types/runtime"
 // 重导出常用类型，方便外部使用
 export type { RuntimeEvent } from "./types/event"
 export type { Config } from "./types/config"
-export type { ContextBuilderOptions, Session, SummaryResult } from "./memory/types"
+export type { ContextBuilderOptions, Session, SummaryResult, SessionMetadata, Fact } from "./memory/types"
 
 /**
  * Runtime 工厂模块
