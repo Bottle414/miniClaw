@@ -7,7 +7,7 @@
 ## Requirements
 
 ### Requirement: Chat message list
-Web UI SHALL display a scrollable list of chat messages, alternating between user and assistant roles.
+Web UI SHALL display a scrollable list of chat messages, alternating between user and assistant roles, using Ant Design components for styling.
 
 #### Scenario: User sends a message
 - **WHEN** user types a message and submits
@@ -18,7 +18,7 @@ Web UI SHALL display a scrollable list of chat messages, alternating between use
 - **THEN** a new assistant message bubble appears and updates in real-time as text-delta events arrive
 
 ### Requirement: Message input area
-Web UI SHALL provide a text input area at the bottom of the screen with a send button. Enter key submits the message.
+Web UI SHALL provide a text input area at the bottom of the Chat Area with a send button, using Ant Design Input component. Enter key submits the message.
 
 #### Scenario: Submit message via Enter key
 - **WHEN** user types text and presses Enter
@@ -61,9 +61,32 @@ Web UI SHALL auto-scroll to the latest message as new content arrives.
 - **WHEN** assistant message content updates
 - **THEN** chat view scrolls to show the latest content
 
+### Requirement: Visual style
+Web UI SHALL use Ant Design component library for consistent styling. The visual style SHALL follow Claude Web aesthetics: light background, soft gray borders, generous whitespace, rounded corners, and clean typography. Ant Design ConfigProvider SHALL be used to customize the theme.
+
+#### Scenario: Ant Design theme
+- **WHEN** Web UI loads
+- **THEN** Ant Design components render with a Claude-inspired light theme (soft grays, rounded corners, generous spacing)
+
+#### Scenario: Style consistency
+- **WHEN** any component is rendered
+- **THEN** it uses Ant Design components or CSS Modules following project conventions (component-folder with index.tsx + index.module.css)
+
 ### Requirement: AI Chat layout
-Web UI SHALL use a layout similar to common AI Chat interfaces: centered content area, message bubbles, bottom input bar.
+Web UI SHALL use a three-column layout: Session Sidebar on the left, Chat Area in the center, and Runtime Inspector on the right. Chat messages SHALL be centered with a maximum width of approximately 800px. Assistant and User messages SHALL use different background colors. The input area SHALL be fixed at the bottom of the Chat Area.
 
 #### Scenario: Layout structure
 - **WHEN** Web UI loads
-- **THEN** layout shows a header area, centered message list, and bottom input bar
+- **THEN** layout shows Session Sidebar on the left, Chat Area in the center, and Runtime Inspector on the right
+
+#### Scenario: Message centering
+- **WHEN** messages are displayed in the Chat Area
+- **THEN** messages are centered with a maximum width of approximately 800px
+
+#### Scenario: Message background differentiation
+- **WHEN** assistant and user messages are displayed
+- **THEN** assistant messages use one background color and user messages use a different background color
+
+#### Scenario: Input area fixed position
+- **WHEN** chat messages are scrolled
+- **THEN** the input area remains fixed at the bottom of the Chat Area
