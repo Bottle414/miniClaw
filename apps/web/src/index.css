@@ -1,20 +1,16 @@
 :root {
-  /* Sky palette */
-  --sky: #89C2FF;
-  --ice: #E6F7FF;
-  --frost: #F8FBFF;
-  --ink: #1A2332;
-  --slate: #6B7A8D;
-  --mist: #E2E8F0;
-
-  /* Derived */
-  --bg: var(--frost);
-  --text: var(--slate);
-  --text-h: var(--ink);
-  --border: var(--mist);
-  --accent: var(--sky);
-  --accent-bg: var(--ice);
-  --accent-border: rgba(137, 194, 255, 0.5);
+  /* Claude-inspired palette */
+  --bg: #f7f7f8;
+  --bg-white: #ffffff;
+  --text: #1a1a1a;
+  --text-secondary: #6b6b6b;
+  --border: #e5e5e5;
+  --border-light: #f0f0f0;
+  --accent: #d97757;
+  --accent-light: #fdf0eb;
+  --assistant-bg: #f7f7f8;
+  --user-bg: #d97757;
+  --user-text: #ffffff;
 
   /* Typography */
   --sans: 'Inter', system-ui, -apple-system, sans-serif;
@@ -31,25 +27,6 @@
 
   @media (max-width: 768px) {
     font-size: 14px;
-  }
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --sky: #6BA8E8;
-    --ice: #162A40;
-    --frost: #0F1923;
-    --ink: #E8EDF2;
-    --slate: #8B9DB5;
-    --mist: #1E2D3D;
-
-    --bg: var(--frost);
-    --text: var(--slate);
-    --text-h: var(--ink);
-    --border: var(--mist);
-    --accent: var(--sky);
-    --accent-bg: var(--ice);
-    --accent-border: rgba(107, 168, 232, 0.4);
   }
 }
 

@@ -1,0 +1,64 @@
+.inspector {
+  width: 450px;
+  flex-shrink: 0;
+  height: 100vh;
+  background: var(--bg-white);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.headerTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
+.closeBtn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+  font-size: 16px;
+}
+
+.closeBtn:hover {
+  background: var(--border-light);
+  color: var(--text);
+}
+
+.tabs {
+  flex: 1;
+  overflow: hidden;
+}
+
+.tabs :global(.ant-tabs) {
+  height: 100%;
+}
+
+.tabs :global(.ant-tabs-content) {
+  height: 100%;
+  overflow-y: auto;
+}
+
+.tabs :global(.ant-tabs-tabpane) {
+  padding: 12px 16px;
+}

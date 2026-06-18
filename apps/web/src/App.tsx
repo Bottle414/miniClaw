@@ -1,25 +1,33 @@
 /**
  * miniClaw Web UI
  *
- * AI Chat 界面，组装消息列表与输入框
+ * 三栏布局：Session Sidebar + Chat Area + Runtime Inspector
  */
 
-import { ChatInput } from "./components/ChatInput"
-import { MessageList } from "./components/MessageList"
-import { useChat } from "./hooks/useChat"
-import "./App.css"
+import { ConfigProvider, theme } from "antd"
+
+import { Layout } from "./components/Layout"
+
+const antTheme = {
+	token: {
+		colorPrimary: "#d97757",
+		colorBgContainer: "#ffffff",
+		colorBgLayout: "#f7f7f8",
+		colorBorder: "#e5e5e5",
+		colorBorderSecondary: "#f0f0f0",
+		colorText: "#1a1a1a",
+		colorTextSecondary: "#6b6b6b",
+		borderRadius: 8,
+		fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+		fontSize: 14
+	}
+}
 
 function App() {
-	const { messages, isStreaming, sendMessage } = useChat()
-
 	return (
-		<div className="chat-app">
-			<header className="chat-header">
-				<h1>miniClaw</h1>
-			</header>
-			<MessageList messages={messages} />
-			<ChatInput onSend={sendMessage} disabled={isStreaming} />
-		</div>
+		<ConfigProvider theme={{ ...antTheme, algorithm: theme.defaultAlgorithm }}>
+			<Layout />
+		</ConfigProvider>
 	)
 }
 

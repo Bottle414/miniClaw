@@ -1,0 +1,58 @@
+.toolList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.toolHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.toolName {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  font-family: var(--mono);
+}
+
+.toolStatus {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.toolStatusSuccess {
+  color: #10b981;
+}
+
+.toolStatusError {
+  color: #ef4444;
+}
+
+.toolDetail {
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 8px 0 0 0;
+}
+
+.toolDetail pre {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px;
+  margin: 4px 0 0 0;
+  font-size: 11px;
+  font-family: var(--mono);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.empty {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 13px;
+  opacity: 0.6;
+  padding: 24px 0;
+}

@@ -1,0 +1,60 @@
+.timeline {
+  padding: 0;
+}
+
+.iteration {
+  margin-bottom: 16px;
+}
+
+.iterationHeader {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.phaseList {
+  padding-left: 12px;
+  border-left: 2px solid var(--border);
+  margin-left: 6px;
+}
+
+.phaseItem {
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 2px 0 2px 8px;
+  position: relative;
+}
+
+.phaseItem::before {
+  content: '';
+  position: absolute;
+  left: -7px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.6;
+}
+
+.phaseThinking::before { background: #8b5cf6; }
+.phaseActing::before { background: #f59e0b; }
+.phaseObserving::before { background: #3b82f6; }
+.phaseDeciding::before { background: #10b981; }
+
+.loopEnd {
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 8px 0 0 12px;
+  font-style: italic;
+}
+
+.empty {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 13px;
+  opacity: 0.6;
+  padding: 24px 0;
+}

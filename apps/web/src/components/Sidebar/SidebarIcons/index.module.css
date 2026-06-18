@@ -1,0 +1,71 @@
+.iconsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 8px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--bg-white);
+  z-index: 1;
+}
+
+.iconButton {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 14px;
+  font-family: var(--sans);
+  transition: background 0.15s, color 0.15s;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.iconButton:hover {
+  background: var(--border-light);
+  color: var(--text);
+}
+
+.iconButton :global(.anticon) {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.iconLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.searchInput {
+  margin-top: 4px;
+}
+
+.logo {
+  font-weight: 700;
+  font-size: 22px;
+  color: var(--text);
+  padding: 10px 16px 10px;
+  border-bottom: 1px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.logoIcon {
+  font-size: 25px;
+  flex-shrink: 0;
+}
+
+:global {
+  .ant-modal-container {
+    min-height: 400px;
+  }
+}

@@ -1,0 +1,14 @@
+.messageList {
+  flex: 1;
+  overflow-y: auto;
+  padding: 28px 20px;
+  scroll-behavior: smooth;
+}
+
+.empty {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 14px;
+  padding-top: 40vh;
+  opacity: 0.6;
+}
