@@ -3,6 +3,7 @@
  *
  * Express 中转服务器，将 runtime 的 AsyncIterable<RuntimeEvent>
  * 转为 SSE 事件流推送给浏览器客户端
+ * 同时提供 Session 和 Memory 查询 REST API
  */
 
 import cors from "cors"
@@ -63,6 +64,64 @@ function serializeEvent(event: RuntimeEvent): string {
  */
 app.get("/api/health", (_req, res) => {
 	res.json({ status: "ok" })
+})
+
+/**
+ * GET /api/sessions
+ * 列出所有 session 的元数据
+ */
+app.get("/api/sessions", async (_req, res) => {
+	try {
+		const metadataList = await runtime.sessionManager.list()
+		res.json({ sessions: metadataList })
+	} catch (err) {
+		res.status(500).json({ error: err instanceof Error ? err.message : String(err) })
+	}
+})
+
+/**
+ * GET /api/session/:id
+ * 获取 session 详情
+ */
+app.get("/api/session/:id", async (req, res) => {
+	try {
+		const session = await runtime.sessionManager.load(req.params.id)
+		if (!session) {
+			res.status(404).json({ error: "Session not found" })
+			return
+		}
+		res.json({
+			id: session.id,
+			name: session.name,
+			createdAt: session.createdAt,
+			updatedAt: session.updatedAt,
+			messageCount: session.messages.length
+		})
+	} catch (err) {
+		res.status(500).json({ error: err instanceof Error ? err.message : String(err) })
+	}
+})
+
+/**
+ * GET /api/session/:id/memory
+ * 获取 session 的 Memory 状态
+ */
+app.get("/api/session/:id/memory", async (req, res) => {
+	try {
+		const session = await runtime.sessionManager.load(req.params.id)
+		if (!session) {
+			res.status(404).json({ error: "Session not found" })
+			return
+		}
+		res.json({
+			summaries: session.summary.map((s) => ({ summary: s.summary, createdAt: s.createdAt })),
+			facts: session.facts.map((f) => ({ category: f.category, content: f.content })),
+			canonicalMessagesCount: session.messages.length,
+			contextMessagesCount: 0 // TODO: 需要暴露 Runtime 内部 contextBuilder 状态
+		})
+	} catch (err) {
+		res.status(500).json({ error: err instanceof Error ? err.message : String(err) })
+	}
 })
 
 /**
