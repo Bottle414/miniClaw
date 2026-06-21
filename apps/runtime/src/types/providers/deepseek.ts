@@ -160,6 +160,14 @@ export interface DeepSeekToolCallResponse {
 	function: { name: string; arguments: string }
 }
 
+/** 流式工具调用增量 */
+export interface DeepSeekToolCallDelta {
+	index: number
+	id?: string
+	type?: "function"
+	function?: { name?: string; arguments?: string }
+}
+
 /** 响应消息 */
 export interface DeepSeekChatCompletionMessage {
 	content?: string | null
@@ -204,7 +212,7 @@ export interface DeepSeekChatCompletionDelta {
 	content?: string | null
 	reasoning_content?: string | null
 	role?: "assistant"
-	tool_calls?: DeepSeekToolCallResponse[]
+	tool_calls?: DeepSeekToolCallDelta[]
 }
 
 /** 流式对话补全选择项 */

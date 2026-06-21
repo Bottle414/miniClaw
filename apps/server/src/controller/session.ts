@@ -14,9 +14,6 @@ export async function list(_req: Request, res: Response): Promise<void> {
 
 /** GET /api/session/:id - 获取 session 完整信息 */
 export async function detail(req: Request, res: Response): Promise<void> {
-	console.log("DETAIL HIT")
-	console.log("id =", req.params.id)
-
 	try {
 		const id = req.params.id as string
 		const session = await sessionService.detail(id)

@@ -21,7 +21,7 @@
   background: transparent;
   color: var(--text-secondary);
   cursor: pointer;
-  font-size: 14px;
+  font-size: 18px;
   font-family: var(--sans);
   transition: background 0.15s, color 0.15s;
   text-align: left;

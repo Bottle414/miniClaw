@@ -14,6 +14,13 @@ export interface TextDeltaEvent {
 	delta: string
 }
 
+/** 思考增量事件 */
+export interface ReasoningDeltaEvent {
+	type: "reasoning-delta"
+	/** 思考增量内容 */
+	delta: string
+}
+
 /** 工具调用开始事件 */
 export interface ToolCallStartEvent {
 	type: "tool-call-start"
@@ -63,6 +70,7 @@ export interface ErrorEvent {
  */
 export type ProviderEvent =
 	| TextDeltaEvent
+	| ReasoningDeltaEvent
 	| ToolCallStartEvent
 	| ToolCallDeltaEvent
 	| ToolCallEndEvent

@@ -68,7 +68,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 			if (data.sessions && Array.isArray(data.sessions)) {
 				const sessions: ChatSession[] = data.sessions.map((s: { id: string; name: string; updatedAt: number }) => ({
 					id: s.id,
-					title: s.name.startsWith("session-") ? "New Chat" : s.name,
+					title: s.name || "New Chat",
 					updatedAt: s.updatedAt
 				}))
 				set({ sessions, initialized: true })
@@ -82,11 +82,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
 	selectSession: (id) => {
 		const { isStreaming, messagesMap } = get()
-
-		console.log("id isStreaming---------------------------->", isStreaming)
 		if (isStreaming) return
-
-		console.log("id messagesMap---------------------------->", messagesMap[id])
 
 		if (messagesMap[id]) {
 			set({ activeSessionId: id, messages: messagesMap[id] })
@@ -95,15 +91,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
 		set({ activeSessionId: id, messages: [] })
 
-		console.log("id---------------------------->", id)
-
 		fetch(`/api/session/${id}`)
 			.then((res) => res.json())
 			.then((data) => {
-				console.log("id data---------------------------->", data)
 				if (data.error) return
-
-				console.log("id data.messages---------------------------->", data.messages)
 
 				const loadedMessages: ChatMessage[] = (data.messages ?? []).map((msg: { role: string; content: string }, i: number) => ({
 					id: `loaded-${i}`,

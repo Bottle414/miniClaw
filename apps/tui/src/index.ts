@@ -40,6 +40,9 @@ const rl = readline.createInterface({ input, output })
  */
 function renderEvent(event: RuntimeEvent): void {
 	switch (event.type) {
+		case "reasoning-delta":
+			process.stdout.write(event.delta)
+			break
 		case "text-delta":
 			process.stdout.write(event.delta)
 			break

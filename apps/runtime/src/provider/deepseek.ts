@@ -104,8 +104,10 @@ export function DeepSeekProvider(): Provider {
 				})
 
 				// 逐 chunk 转换并 yield
+				// 维护 index → toolCallId 映射，用于关联后续参数增量 chunk
+				const toolCallIndexMap = new Map<number, string>()
 				for await (const chunk of stream) {
-					const result = deepseekAdapter.transformStreamChunk?.(chunk)
+					const result = deepseekAdapter.transformStreamChunk?.(chunk, toolCallIndexMap)
 					if (result) {
 						const events = Array.isArray(result) ? result : [result]
 						for (const e of events) yield e

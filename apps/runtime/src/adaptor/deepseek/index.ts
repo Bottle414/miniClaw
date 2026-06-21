@@ -25,6 +25,7 @@ import type {
 	DeepSeekTool,
 	DeepSeekToolChoice,
 	DeepSeekToolCallResponse,
+	DeepSeekToolCallDelta,
 	DeepSeekChatCompletionChunk
 } from "../../types/providers/deepseek"
 import type { ProviderEvent } from "../../types/event"
@@ -72,8 +73,11 @@ export const deepseekAdapter: LLMAdapter<DeepSeekChatCompletionRequest, DeepSeek
 	/**
 	 * 将 DeepSeek 流式 chunk 转换为 Runtime Event
 	 * 单个 chunk 可能产出多个事件（如同时包含文本增量和工具调用开始）
+	 *
+	 * @param chunk 流式 chunk
+	 * @param toolCallIndexMap index → toolCallId 映射（由 provider 维护），用于关联后续参数增量 chunk
 	 */
-	transformStreamChunk(chunk: unknown): ProviderEvent | ProviderEvent[] | null {
+	transformStreamChunk(chunk: unknown, toolCallIndexMap?: Map<number, string>): ProviderEvent | ProviderEvent[] | null {
 		const dsChunk = chunk as DeepSeekChatCompletionChunk
 		const choice = dsChunk.choices?.[0]
 		if (!choice) return null
@@ -92,6 +96,11 @@ export const deepseekAdapter: LLMAdapter<DeepSeekChatCompletionRequest, DeepSeek
 
 		const events: ProviderEvent[] = []
 
+		// 思考增量
+		if (delta.reasoning_content) {
+			events.push({ type: "reasoning-delta", delta: delta.reasoning_content })
+		}
+
 		// 文本增量
 		if (delta.content) {
 			logger("stream", "white", delta.content, undefined, false)
@@ -102,6 +111,7 @@ export const deepseekAdapter: LLMAdapter<DeepSeekChatCompletionRequest, DeepSeek
 		if (delta.tool_calls) {
 			logger("stream", "cyan", "\n[stream] tool_calls", [
 				delta.tool_calls.map((tc) => ({
+					index: tc.index,
 					id: tc.id || "(续)",
 					name: tc.function?.name || "(续)",
 					argsLen: tc.function?.arguments?.length ?? 0
@@ -109,8 +119,9 @@ export const deepseekAdapter: LLMAdapter<DeepSeekChatCompletionRequest, DeepSeek
 			])
 
 			for (const tc of delta.tool_calls) {
-				// 首个 chunk 包含 id 和 function.name
+				// 首个 chunk 包含 id 和 function.name，用 index 记录映射
 				if (tc.id && tc.function?.name) {
+					toolCallIndexMap?.set(tc.index, tc.id)
 					events.push({
 						type: "tool-call-start",
 						toolCallId: tc.id,
@@ -118,11 +129,12 @@ export const deepseekAdapter: LLMAdapter<DeepSeekChatCompletionRequest, DeepSeek
 					})
 				}
 
-				// 参数增量
+				// 参数增量：通过 index 找到对应的 toolCallId
 				if (tc.function?.arguments) {
+					const toolCallId = (toolCallIndexMap && tc.index !== undefined ? toolCallIndexMap.get(tc.index) : undefined) ?? tc.id ?? ""
 					events.push({
 						type: "tool-call-delta",
-						toolCallId: tc.id ?? "",
+						toolCallId,
 						argumentsDelta: tc.function.arguments
 					})
 				}

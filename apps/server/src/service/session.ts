@@ -24,32 +24,51 @@ export interface SessionDetail {
 	contextMessagesCount: number
 }
 
+/** 从第一条用户消息中提取标题，默认 session-xxx 格式时使用 */
+function deriveTitleFromMessages(name: string, messages: Array<{ role: string; content: string }>): string {
+	if (name && !name.startsWith("session-")) return name
+	const firstUser = messages.find((m) => m.role === "user")
+	if (!firstUser) return name
+	const content = firstUser.content
+	return content.length > 30 ? content.slice(0, 30) + "…" : content
+}
+
 /** 初始化 sessionService，返回 list 和 detail 方法 */
 export function initSessionService(sessionsRoot: string) {
-	console.log("session controller loaded")
 	const store = createFileSystemMemoryStore(sessionsRoot)
 	const sessionManager = createSessionManager(store)
-
-	console.log("session111 controller loaded")
 
 	return {
 		sessionManager,
 		async list(): Promise<SessionListItem[]> {
 			const metadataList: SessionMetadata[] = await sessionManager.list()
-			return metadataList.map((meta) => ({
-				id: meta.id,
-				name: meta.name,
-				createdAt: Number(meta.createdAt),
-				updatedAt: Number(meta.updatedAt)
-			}))
+			const results: SessionListItem[] = []
+			for (const meta of metadataList) {
+				// 默认 session-xxx 格式的 name 需要从消息中提取标题
+				if (meta.name.startsWith("session-")) {
+					const session = await sessionManager.load(meta.id)
+					const messages = session ? convertMessages(session.messages) : []
+					results.push({
+						id: meta.id,
+						name: deriveTitleFromMessages(meta.name, messages),
+						createdAt: Number(meta.createdAt),
+						updatedAt: Number(meta.updatedAt)
+					})
+				} else {
+					results.push({
+						id: meta.id,
+						name: meta.name,
+						createdAt: Number(meta.createdAt),
+						updatedAt: Number(meta.updatedAt)
+					})
+				}
+			}
+			return results
 		},
 
 		async detail(sessionId: string): Promise<SessionDetail | null> {
-			console.log("id sessionId------------------------>", sessionId)
 			const session: Session | null = await sessionManager.load(sessionId)
-			console.log("id session------------------------>", session)
 			if (!session) return null
-			console.log("id session111------------------------>", session)
 
 			return {
 				id: session.id,

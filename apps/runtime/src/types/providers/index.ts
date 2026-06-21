@@ -46,9 +46,10 @@ export interface LLMAdapter<TProviderRequest = unknown, TProviderResponse = unkn
 	/**
 	 * 将提供商流式 chunk 转换为 Provider Event
 	 * @param chunk 提供商流式 chunk
+	 * @param toolCallIndexMap index → toolCallId 映射（由 provider 维护），用于关联后续参数增量 chunk
 	 * @returns ProviderEvent，或 null 表示跳过无意义 chunk
 	 */
-	transformStreamChunk?(chunk: unknown): ProviderEvent | ProviderEvent[] | null
+	transformStreamChunk?(chunk: unknown, toolCallIndexMap?: Map<number, string>): ProviderEvent | ProviderEvent[] | null
 }
 
 /**

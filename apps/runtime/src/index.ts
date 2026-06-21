@@ -154,47 +154,49 @@ export function createRuntime(options: RuntimeOptions): Runtime {
 	 * @returns RuntimeEvent 的 AsyncIterable
 	 */
 	async function* chat(userInput: string, options?: ChatOptions): AsyncIterable<RuntimeEvent> {
-		let loopError: Error | undefined
 		let summaryResults: SummaryResult[] = []
+		let chatCompleted = false
 
-		for await (const event of executeReActLoop({
-			provider,
-			config,
-			userInput,
-			initialMessages: messages,
-			memory,
-			contextOptions: options?.contextOptions,
-			summarizer,
-			sessionId: session.id,
-			toolHandler: handlerTool
-		})) {
-			yield event
-
-			// 收集 loop-complete 中的结果
-			if (event.type === "loop-complete") {
-				loopError = event.error
-				summaryResults = event.summaryResults
-
-				// 更新内部 messages
-				if (event.state) {
-					messages.length = 0
-					messages.push(...event.state.messages)
+		try {
+			for await (const event of executeReActLoop({
+				provider,
+				config,
+				userInput,
+				initialMessages: messages,
+				memory,
+				contextOptions: options?.contextOptions,
+				summarizer,
+				sessionId: session.id,
+				toolHandler: handlerTool
+			})) {
+				// 在 yield 之前收集 loop-complete 数据，因为 yield 后消费者可能 break 导致后续代码不执行
+				if (event.type === "loop-complete") {
+					summaryResults = event.summaryResults
+					if (event.state) {
+						messages.length = 0
+						messages.push(...event.state.messages)
+					}
+					chatCompleted = true
 				}
+
+				yield event
+			}
+		} finally {
+			if (chatCompleted) {
+				// 更新 memory 中的摘要结果
+				if (summaryResults.length > 0) {
+					updateMemoryWithSummaryResults(summaryResults)
+				}
+
+				// 持久化 session
+				session.messages = [...messages]
+				if (summaryResults.length > 0) {
+					session.summary.push(...summaryResults)
+					session.facts.push(...summaryResults.flatMap((sr) => sr.extractedFacts))
+				}
+				await sessionManager.save(session)
 			}
 		}
-
-		// 更新 memory 中的摘要结果
-		if (summaryResults.length > 0) {
-			updateMemoryWithSummaryResults(summaryResults)
-		}
-
-		// 持久化 session
-		session.messages = [...messages]
-		if (summaryResults.length > 0) {
-			session.summary.push(...summaryResults)
-			session.facts.push(...summaryResults.flatMap((sr) => sr.extractedFacts))
-		}
-		await sessionManager.save(session)
 	}
 
 	// session 初始化为异步操作，首次 chat 时自动触发
