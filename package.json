@@ -16,7 +16,8 @@
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "clean": "pnpm -r exec rm -rf node_modules dist",
-    "chat": "pnpm --filter @mini-claw/tui chat"
+    "chat": "pnpm --filter @mini-claw/tui chat",
+    "test": "pnpm -r test"
   },
   "author": "Bottle414",
   "license": "ISC",

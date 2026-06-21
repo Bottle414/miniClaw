@@ -16,7 +16,8 @@
   },
   "type": "module",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "test": "tsx --test 'src/**/*.test.ts'"
   },
   "author": "Bottle414",
   "license": "ISC",

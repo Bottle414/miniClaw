@@ -2,16 +2,16 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import express from "express"
 import request from "supertest"
 
-import * as chatController from "../chat.js"
 import { CHAT } from "../../constants.js"
 
-// mock index.js 中的 chatService
-vi.mock("../index.js", () => ({
+// mock index.js 中的 chatService，阻止顶层副作用执行
+vi.mock("../../index.js", () => ({
 	chatService: {
 		chat: vi.fn()
 	}
 }))
 
+import * as chatController from "../chat.js"
 import { chatService } from "../../index.js"
 
 describe("chatController", () => {

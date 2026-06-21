@@ -1,7 +1,11 @@
 {
-	"allow": [],
-	"check": [],
-	"deny": [
-		"weather.getWeather"
-	]
+	"allow": [
+		"time.getCurrent",
+		"math.calculate"
+	],
+	"check": [
+		"weather.getWeather",
+		"fs.readFile"
+	],
+	"deny": []
 }

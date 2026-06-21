@@ -25,6 +25,9 @@ import { createConfig } from "./utils/config"
 import { DeepSeekProvider } from "./provider"
 import { createToolHandler } from "./tools"
 import { weatherGetWeather } from "./tools/weather"
+import { timeGetCurrent } from "./tools/time"
+import { fsReadFile } from "./tools/fs"
+import { mathCalculate } from "./tools/math"
 import { createLLMSummarizer, createFileSystemMemoryStore, createRuntimeMemoryState, createSessionManager, setSessionMemory } from "./memory"
 import { executeReActLoop } from "./react/loop"
 
@@ -74,6 +77,9 @@ export function createRuntime(options: RuntimeOptions): Runtime {
 		permissionConfig: options.permissionConfig
 	})
 	handlerTool.register(weatherGetWeather.definition, weatherGetWeather.executor, weatherGetWeather.metadata)
+	handlerTool.register(timeGetCurrent.definition, timeGetCurrent.executor, timeGetCurrent.metadata)
+	handlerTool.register(fsReadFile.definition, fsReadFile.executor, fsReadFile.metadata)
+	handlerTool.register(mathCalculate.definition, mathCalculate.executor, mathCalculate.metadata)
 
 	// 初始化消息历史
 	const messages: LLMMessage[] = []

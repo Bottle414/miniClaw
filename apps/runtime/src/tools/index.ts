@@ -10,6 +10,9 @@ import { createLoggingMiddleware } from "./middlewares/logging"
 import { createRetryMiddleware } from "./middlewares/retry"
 import { createTimeoutMiddleware } from "./middlewares/timeout"
 import { weatherGetWeather } from "./weather"
+import { timeGetCurrent } from "./time"
+import { fsReadFile } from "./fs"
+import { mathCalculate } from "./math"
 
 /** 工具注册项 */
 interface ToolEntry {
