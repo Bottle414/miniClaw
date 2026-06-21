@@ -1,5 +1,7 @@
 import { createFileSystemMemoryStore, createSessionManager } from "@mini-claw/runtime/memory"
 import type { Session, SessionMetadata } from "@mini-claw/runtime"
+import { readFile } from "node:fs/promises"
+import path from "node:path"
 
 import { convertMessages } from "../utils/index.js"
 
@@ -80,6 +82,16 @@ export function initSessionService(sessionsRoot: string) {
 				facts: session.facts.map((f) => ({ category: f.category, content: f.content })),
 				canonicalMessagesCount: session.messages.length,
 				contextMessagesCount: 0
+			}
+		},
+
+		async metrics(sessionId: string): Promise<Record<string, unknown> | null> {
+			const metricsPath = path.join(sessionsRoot, sessionId, "metrics.json")
+			try {
+				const content = await readFile(metricsPath, "utf-8")
+				return JSON.parse(content) as Record<string, unknown>
+			} catch {
+				return null
 			}
 		}
 	}

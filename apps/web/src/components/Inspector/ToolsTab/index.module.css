@@ -18,7 +18,7 @@
 }
 
 .toolStatus {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text-secondary);
 }
 
@@ -42,7 +42,7 @@
   border-radius: 6px;
   padding: 8px;
   margin: 4px 0 0 0;
-  font-size: 11px;
+  font-size: 13px;
   font-family: var(--mono);
   overflow-x: auto;
   white-space: pre-wrap;

@@ -9,6 +9,7 @@ export type { RuntimeOptions, Runtime, ChatOptions } from "./types/runtime"
 export type { RuntimeEvent } from "./types/event"
 export type { Config } from "./types/config"
 export type { ContextBuilderOptions, Session, SummaryResult, SessionMetadata, Fact } from "./memory/types"
+export type { MetricsSnapshot, ToolMetrics } from "./types/llm/tool"
 export { loadPermissionConfig } from "./tools/middlewares/permission"
 
 /**

@@ -11,7 +11,7 @@ import dotenv from "dotenv"
 import express from "express"
 import path from "node:path"
 
-import { HEALTH, SESSIONS, SESSION_DETAIL, CHAT } from "./constants.js"
+import { HEALTH, SESSIONS, SESSION_DETAIL, SESSION_METRICS, CHAT } from "./constants.js"
 import { initSessionService } from "./service/session.js"
 import { initChatService } from "./service/chat.js"
 import { healthCheck } from "./controller/health.js"
@@ -61,6 +61,7 @@ app.use("/api", (_req, res, next) => {
 app.get(HEALTH, healthCheck)
 app.get(SESSIONS, sessionController.list)
 app.get(SESSION_DETAIL, sessionController.detail)
+app.get(SESSION_METRICS, sessionController.metrics)
 app.post(CHAT, chatController.chat)
 
 // 启动服务器

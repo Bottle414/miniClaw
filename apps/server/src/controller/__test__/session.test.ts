@@ -2,13 +2,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import express from "express"
 import request from "supertest"
 
-import { SESSIONS, SESSION_DETAIL } from "../../constants.js"
+import { SESSIONS, SESSION_DETAIL, SESSION_METRICS } from "../../constants.js"
 
 // mock index.js 中的 sessionService，阻止顶层副作用执行
 vi.mock("../../index.js", () => ({
 	sessionService: {
 		list: vi.fn(),
-		detail: vi.fn()
+		detail: vi.fn(),
+		metrics: vi.fn()
 	}
 }))
 
@@ -23,6 +24,7 @@ describe("sessionController", () => {
 		app = express()
 		app.get(SESSIONS, sessionController.list)
 		app.get(SESSION_DETAIL, sessionController.detail)
+		app.get(SESSION_METRICS, sessionController.metrics)
 	})
 
 	describe("GET /api/sessions", () => {
@@ -83,6 +85,51 @@ describe("sessionController", () => {
 
 			expect(res.status).toBe(500)
 			expect(res.body.error).toBe("DB error")
+		})
+	})
+
+	describe("GET /api/session/:id/metrics", () => {
+		it("should return tool metrics", async () => {
+			const metricsData = {
+				tools: {
+					"weather.getWeather": {
+						callCount: 2,
+						errorCount: 0,
+						totalDurationMs: 120,
+						avgDurationMs: 60,
+						lastCalledAt: "2026-06-21T14:12:46.903Z",
+						cacheHits: 0,
+						cacheMisses: 2,
+						timeoutCount: 0,
+						retryCount: 0
+					}
+				}
+			}
+			;(sessionService.metrics as any).mockResolvedValue(metricsData)
+
+			const res = await request(app).get(SESSION_METRICS.replace(":id", "s1"))
+
+			expect(res.status).toBe(200)
+			expect(res.body.tools).toBeDefined()
+			expect(res.body.tools["weather.getWeather"].callCount).toBe(2)
+		})
+
+		it("should return empty tools when no metrics data", async () => {
+			;(sessionService.metrics as any).mockResolvedValue(null)
+
+			const res = await request(app).get(SESSION_METRICS.replace(":id", "s1"))
+
+			expect(res.status).toBe(200)
+			expect(res.body).toEqual({ tools: {} })
+		})
+
+		it("should return 500 when service throws", async () => {
+			;(sessionService.metrics as any).mockRejectedValue(new Error("FS error"))
+
+			const res = await request(app).get(SESSION_METRICS.replace(":id", "s1"))
+
+			expect(res.status).toBe(500)
+			expect(res.body.error).toBe("FS error")
 		})
 	})
 })

@@ -26,3 +26,18 @@ export async function detail(req: Request, res: Response): Promise<void> {
 		res.status(500).json({ error: err instanceof Error ? err.message : String(err) })
 	}
 }
+
+/** GET /api/session/:id/metrics - 获取 session 工具指标 */
+export async function metrics(req: Request, res: Response): Promise<void> {
+	try {
+		const id = req.params.id as string
+		const data = await sessionService.metrics(id)
+		if (!data) {
+			res.json({ tools: {} })
+			return
+		}
+		res.json(data)
+	} catch (err) {
+		res.status(500).json({ error: err instanceof Error ? err.message : String(err) })
+	}
+}

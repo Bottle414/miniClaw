@@ -6,7 +6,7 @@
 
 import { create } from "zustand"
 
-import type { IterationRecord, RuntimePhase, ToolRecord } from "../types/runtime"
+import type { IterationRecord, PhaseRecord, RuntimePhase, ToolRecord } from "../types/runtime"
 
 interface RuntimeState {
 	/** 迭代记录列表 */
@@ -22,6 +22,12 @@ interface RuntimeState {
 	onIterationStart: (iteration: number) => void
 	/** 处理 phase-change 事件 */
 	onPhaseChange: (phase: RuntimePhase, iteration: number) => void
+	/** 处理 reasoning-delta 事件（追加到当前阶段的 reasoning） */
+	onReasoningDelta: (iteration: number, delta: string) => void
+	/** 处理 text-delta 事件（追加到当前阶段的 text） */
+	onTextDelta: (iteration: number, delta: string) => void
+	/** 处理 tool-call-start 事件 */
+	onToolCallStart: (iteration: number, toolCallId: string, toolName: string) => void
 	/** 处理 tool-execute 事件 */
 	onToolExecute: (toolCallId: string, toolName: string) => void
 	/** 处理 tool-result 事件 */
@@ -30,8 +36,16 @@ interface RuntimeState {
 	onToolCallEnd: (toolCallId: string, args: string) => void
 	/** 处理 loop-end 事件 */
 	onLoopEnd: (reason: string, iterations: number) => void
+	/** 处理 deciding 阶段的终止原因 */
+	onDecidingTermination: (iteration: number, reason: string) => void
 	/** 清空 Runtime 数据（新建会话时） */
 	clearRuntime: () => void
+}
+
+/** 获取指定迭代的当前活跃阶段索引 */
+function getActivePhaseIndex(iteration: IterationRecord): number {
+	// 返回最后一个阶段的索引
+	return iteration.phases.length - 1
 }
 
 export const useRuntimeStore = create<RuntimeState>((set) => ({
@@ -50,11 +64,62 @@ export const useRuntimeStore = create<RuntimeState>((set) => ({
 		set((s) => {
 			const iterations = [...s.iterations]
 			const idx = iterations.findIndex((it) => it.iteration === iteration)
+			const newPhase: PhaseRecord = { phase }
 			if (idx >= 0) {
-				iterations[idx] = { ...iterations[idx], phases: [...iterations[idx].phases, phase] }
+				iterations[idx] = { ...iterations[idx], phases: [...iterations[idx].phases, newPhase] }
 			} else {
-				iterations.push({ iteration, phases: [phase] })
+				iterations.push({ iteration, phases: [newPhase] })
 			}
+			return { iterations }
+		})
+	},
+
+	onReasoningDelta: (iteration, delta) => {
+		set((s) => {
+			const iterations = [...s.iterations]
+			const idx = iterations.findIndex((it) => it.iteration === iteration)
+			if (idx < 0) return s
+			const iter = { ...iterations[idx] }
+			const phases = [...iter.phases]
+			const activeIdx = getActivePhaseIndex(iter)
+			if (activeIdx < 0) return s
+			phases[activeIdx] = { ...phases[activeIdx], reasoning: (phases[activeIdx].reasoning ?? "") + delta }
+			iter.phases = phases
+			iterations[idx] = iter
+			return { iterations }
+		})
+	},
+
+	onTextDelta: (iteration, delta) => {
+		set((s) => {
+			const iterations = [...s.iterations]
+			const idx = iterations.findIndex((it) => it.iteration === iteration)
+			if (idx < 0) return s
+			const iter = { ...iterations[idx] }
+			const phases = [...iter.phases]
+			const activeIdx = getActivePhaseIndex(iter)
+			if (activeIdx < 0) return s
+			phases[activeIdx] = { ...phases[activeIdx], text: (phases[activeIdx].text ?? "") + delta }
+			iter.phases = phases
+			iterations[idx] = iter
+			return { iterations }
+		})
+	},
+
+	onToolCallStart: (iteration, toolCallId, toolName) => {
+		set((s) => {
+			const iterations = [...s.iterations]
+			const idx = iterations.findIndex((it) => it.iteration === iteration)
+			if (idx < 0) return s
+			const iter = { ...iterations[idx] }
+			const phases = [...iter.phases]
+			const activeIdx = getActivePhaseIndex(iter)
+			if (activeIdx < 0) return s
+			const phase = { ...phases[activeIdx] }
+			const toolCalls = [...(phase.toolCalls ?? []), { toolCallId, toolName }]
+			phases[activeIdx] = { ...phase, toolCalls }
+			iter.phases = phases
+			iterations[idx] = iter
 			return { iterations }
 		})
 	},
@@ -83,6 +148,23 @@ export const useRuntimeStore = create<RuntimeState>((set) => ({
 
 	onLoopEnd: (reason, iterations) => {
 		set({ loopEndReason: reason, totalIterations: iterations })
+	},
+
+	onDecidingTermination: (iteration, reason) => {
+		set((s) => {
+			const iterations = [...s.iterations]
+			const idx = iterations.findIndex((it) => it.iteration === iteration)
+			if (idx < 0) return s
+			const iter = { ...iterations[idx] }
+			const phases = [...iter.phases]
+			// 找到 deciding 阶段
+			const decidingIdx = phases.findIndex((p) => p.phase === "deciding")
+			if (decidingIdx < 0) return s
+			phases[decidingIdx] = { ...phases[decidingIdx], terminationReason: reason }
+			iter.phases = phases
+			iterations[idx] = iter
+			return { iterations }
+		})
 	},
 
 	clearRuntime: () => {

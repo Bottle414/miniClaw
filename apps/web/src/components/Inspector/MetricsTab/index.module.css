@@ -1,0 +1,85 @@
+.metricsList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.toolCard {
+  background: var(--bg-secondary, #f5f5f5);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.toolCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.toolCardName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+}
+
+.toolCardCalls {
+  font-size: 13px;
+  color: var(--text-secondary);
+  background: var(--bg-white, #fff);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.toolCardGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+}
+
+.metricItem {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 2px 0;
+}
+
+.metricLabel {
+  color: var(--text-secondary);
+}
+
+.metricValue {
+  color: var(--text);
+  font-weight: 500;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+}
+
+.metricError {
+  color: #ef4444;
+}
+
+.toolCardFooter {
+  font-size: 13px;
+  color: var(--text-secondary);
+  opacity: 0.7;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border-light);
+}
+
+.loading {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 13px;
+  padding: 24px 0;
+}
+
+.empty {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 13px;
+  opacity: 0.6;
+  padding: 24px 0;
+}

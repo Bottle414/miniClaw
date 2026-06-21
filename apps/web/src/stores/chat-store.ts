@@ -10,8 +10,9 @@ import { v4 as uuidv4 } from "uuid"
 import type { ChatMessage } from "../types/message"
 import type { ChatSession } from "../types/session"
 import { createUserMessage, processEvent } from "../lib/message-merger"
-import { processRuntimeEvent } from "../lib/runtime-event-processor"
+import { processRuntimeEvent, resetRuntimeEventProcessor } from "../lib/runtime-event-processor"
 import { streamChat } from "../lib/sse-client"
+import { useRuntimeStore } from "./runtime-store"
 
 function createSessionId(): string {
 	return uuidv4()
@@ -139,6 +140,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
 	sendMessage: async (content) => {
 		const { activeSessionId, messagesMap, isStreaming } = get()
 		if (isStreaming) return
+
+		// 每次发送新消息时清空 runtime inspector 数据，避免多次消息的迭代数据混在一起
+		useRuntimeStore.getState().clearRuntime()
+		resetRuntimeEventProcessor()
 
 		let sid = activeSessionId
 		if (!sid) {
