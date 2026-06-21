@@ -12,6 +12,7 @@ import { stdin as input, stdout as output } from "node:process"
 
 import { createRuntime } from "@mini-claw/runtime"
 import type { RuntimeEvent } from "@mini-claw/runtime"
+import { loadPermissionConfig } from "@mini-claw/runtime"
 
 // 项目根目录（tui 位于 apps/tui/src/，向上三级）
 const projectRoot = path.resolve(import.meta.dirname, "../../..")
@@ -27,7 +28,8 @@ const runtime = createRuntime({
 	model: process.env.DEEPSEEK_MODEL,
 	sessionId: process.env.SESSION_ID,
 	sessionName: process.env.SESSION_NAME,
-	sessionsRoot: path.resolve(projectRoot, ".sessions")
+	sessionsRoot: path.resolve(projectRoot, ".sessions"),
+	permissionConfig: loadPermissionConfig(projectRoot)
 })
 
 // 创建 readline 接口

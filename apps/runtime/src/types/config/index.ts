@@ -1,6 +1,7 @@
-import { LLMTool } from "../llm"
+import type { LLMTool } from "../llm"
+import type { MetricsSnapshot } from "../llm/tool"
 
-import { Provider } from "../providers"
+import type { Provider } from "../providers"
 
 /**
  * 运行时配置
@@ -17,6 +18,8 @@ export interface RuntimeConfig {
 	maxToolRetryTimes?: number
 	/** 最大消息发送重试次数 */
 	maxSendRetryTimes?: number
+	/** 指标更新回调，每次工具调用后推送最新快照 */
+	onMetricsUpdate?: (snapshot: MetricsSnapshot) => void
 }
 
 /**

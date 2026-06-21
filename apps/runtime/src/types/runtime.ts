@@ -8,6 +8,7 @@
 import type { Config } from "./config"
 import type { ContextBuilderOptions, SessionCreateOptions, Session, SessionMetadata } from "../memory/types"
 import type { RuntimeEvent } from "./event"
+import type { PermissionConfig, MetricsSnapshot } from "./llm/tool"
 
 /** Session 管理器接口，由 createSessionManager 返回。 */
 interface SessionManager {
@@ -34,6 +35,12 @@ export interface RuntimeOptions {
 	sessionName?: string
 	/** Session 存储目录路径（必需，由调用方指定）。 */
 	sessionsRoot: string
+	/** 权限配置（可选，不传则使用默认配置 allow: ["*"]）。 */
+	permissionConfig?: PermissionConfig
+	/** 权限确认回调，check 类型工具执行前调用（可选，默认自动放行）。 */
+	onPermissionCheck?: (toolName: string) => Promise<boolean>
+	/** 指标更新回调，每次工具调用后推送最新快照（可选）。 */
+	onMetricsUpdate?: (snapshot: MetricsSnapshot) => void
 }
 
 /** chat 方法参数选项。 */

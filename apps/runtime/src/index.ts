@@ -9,6 +9,7 @@ export type { RuntimeOptions, Runtime, ChatOptions } from "./types/runtime"
 export type { RuntimeEvent } from "./types/event"
 export type { Config } from "./types/config"
 export type { ContextBuilderOptions, Session, SummaryResult, SessionMetadata, Fact } from "./memory/types"
+export { loadPermissionConfig } from "./tools/middlewares/permission"
 
 /**
  * Runtime 工厂模块
@@ -65,7 +66,13 @@ export function createRuntime(options: RuntimeOptions): Runtime {
 	const sessionManager = createSessionManager(sessionStore)
 
 	// 创建工具处理器（使用统一的 sessionsRoot）
-	const handlerTool = createToolHandler(undefined, sessionsRoot)
+	// permissionConfig 由调用方显式传入或通过 loadPermissionConfig 加载
+	const handlerTool = createToolHandler({
+		sessionsRoot,
+		onMetricsUpdate: options.onMetricsUpdate,
+		onPermissionCheck: options.onPermissionCheck,
+		permissionConfig: options.permissionConfig
+	})
 	handlerTool.register(weatherGetWeather.definition, weatherGetWeather.executor, weatherGetWeather.metadata)
 
 	// 初始化消息历史

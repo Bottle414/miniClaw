@@ -36,7 +36,8 @@ const runtimeConfig = {
 	apiKey,
 	baseUrl: process.env.DEEPSEEK_BASE_URL,
 	model: process.env.DEEPSEEK_MODEL,
-	sessionsRoot: path.resolve(projectRoot, ".sessions")
+	sessionsRoot: path.resolve(projectRoot, ".sessions"),
+	projectRoot
 }
 
 // 初始化 service

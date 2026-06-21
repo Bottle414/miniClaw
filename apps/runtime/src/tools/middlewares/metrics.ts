@@ -1,27 +1,11 @@
-import { promises as fs } from "node:fs"
-import path from "node:path"
-
-import type { ToolMiddleware, ToolResult, SessionMetrics, ToolMetrics } from "../../types/llm/tool"
-import { logger } from "../../utils/logger"
+import type { ToolMiddleware, ToolResult, MetricsSnapshot, ToolMetrics } from "../../types/llm/tool"
 
 /**
  * 创建指标采集中间件
- * 内存聚合 + 持久化到 session 根目录 metrics.json
+ * 仅负责运行时聚合，通过回调向调用方推送指标快照
  */
-export function createMetricsMiddleware(sessionsRoot: string): ToolMiddleware {
+export function createMetricsMiddleware(onMetricsUpdate?: (snapshot: MetricsSnapshot) => void): ToolMiddleware {
 	const metricsMap = new Map<string, ToolMetrics>()
-
-	async function persistMetrics(sessionId: string): Promise<void> {
-		if (!sessionId) return
-		const filePath = path.join(sessionsRoot, sessionId, "metrics.json")
-		const data: SessionMetrics = { tools: Object.fromEntries(metricsMap) }
-		try {
-			await fs.mkdir(path.dirname(filePath), { recursive: true })
-			await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf-8")
-		} catch (err) {
-			logger("tool", "red", "[Metrics] Failed to persist", [err instanceof Error ? err.message : String(err)])
-		}
-	}
 
 	return async (context, next) => {
 		const { toolName, runtime } = context
@@ -71,7 +55,10 @@ export function createMetricsMiddleware(sessionsRoot: string): ToolMiddleware {
 			metrics.retryCount += runtime.retryCount
 		}
 
-		await persistMetrics(context.sessionId)
+		if (onMetricsUpdate) {
+			const snapshot: MetricsSnapshot = { tools: Object.fromEntries(metricsMap) }
+			onMetricsUpdate(snapshot)
+		}
 
 		return result
 	}

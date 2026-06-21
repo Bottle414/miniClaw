@@ -1,6 +1,6 @@
-import type { LLMTool } from "../types/llm"
-import type { ToolExecutor, ToolMetadata, ToolResult, ToolMiddleware, MiddlewareContext, MiddlewareRuntimeState } from "../types/llm/tool"
 import path from "node:path"
+import type { LLMTool } from "../types/llm"
+import type { ToolExecutor, ToolMetadata, ToolResult, ToolMiddleware, MiddlewareContext, MiddlewareRuntimeState, PermissionConfig, MetricsSnapshot } from "../types/llm/tool"
 import { composeMiddlewareChain } from "./middlewares/compose"
 import { createPermissionMiddleware } from "./middlewares/permission"
 import { createCancellationMiddleware } from "./middlewares/cancellation"
@@ -27,6 +27,18 @@ const defaultMetadata: ToolMetadata = {
 	dangerous: false
 }
 
+/** 工具处理器配置 */
+interface ToolHandlerOptions {
+	/** 权限配置 */
+	permissionConfig?: PermissionConfig
+	/** 权限确认回调 */
+	onPermissionCheck?: (toolName: string) => Promise<boolean>
+	/** 指标更新回调 */
+	onMetricsUpdate?: (snapshot: MetricsSnapshot) => void
+	/** session 根目录（用于 logging middleware） */
+	sessionsRoot?: string
+}
+
 /** 工具处理器类型 */
 export type ToolHandler = ReturnType<typeof createToolHandler>
 
@@ -34,16 +46,23 @@ export type ToolHandler = ReturnType<typeof createToolHandler>
  * 创建工具处理器
  * 统一注册和调用工具，支持中间件链
  */
-export function createToolHandler(middlewares?: ToolMiddleware[], sessionsRoot?: string) {
+export function createToolHandler(options?: ToolHandlerOptions) {
 	const tools = new Map<string, ToolEntry>()
-	const permissions = new Set<string>()
 
-	// 默认中间件链：permission → cancellation → cache → metrics → logging → retry → timeout
-	const effectiveMiddlewares = middlewares ?? [
-		createPermissionMiddleware(() => permissions),
+	const {
+		permissionConfig,
+		onPermissionCheck = async () => true,
+		onMetricsUpdate,
+		sessionsRoot
+	} = options ?? {}
+
+	// 默认中间件链：permission → cancellation → metrics → cache → logging → retry → timeout
+	// metrics 在 cache 之前，确保缓存命中时 metrics 仍可记录
+	const effectiveMiddlewares: ToolMiddleware[] = [
+		createPermissionMiddleware(permissionConfig ?? { allow: ["*"] }, onPermissionCheck),
 		createCancellationMiddleware(),
+		createMetricsMiddleware(onMetricsUpdate),
 		createCacheMiddleware(),
-		createMetricsMiddleware(sessionsRoot ?? path.join(process.cwd(), ".sessions")),
 		createLoggingMiddleware(sessionsRoot ?? path.join(process.cwd(), ".sessions")),
 		createRetryMiddleware(),
 		createTimeoutMiddleware()
@@ -107,19 +126,13 @@ export function createToolHandler(middlewares?: ToolMiddleware[], sessionsRoot?:
 		return tools.has(name)
 	}
 
-	/** 添加权限 */
-	function addPermission(perm: string): void {
-		permissions.add(perm)
-	}
-
 	return {
 		register,
 		getToolDefinitions,
 		get,
 		set,
 		call,
-		has,
-		addPermission
+		has
 	}
 }
 

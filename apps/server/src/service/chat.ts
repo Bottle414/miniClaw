@@ -1,4 +1,5 @@
 import { createRuntime } from "@mini-claw/runtime"
+import { loadPermissionConfig } from "@mini-claw/runtime"
 import type { Runtime, RuntimeEvent } from "@mini-claw/runtime"
 
 import { serializeEvent } from "../utils/index.js"
@@ -16,14 +17,15 @@ export interface SSEEvent {
 }
 
 /** 初始化 chatService，返回 chat 方法 */
-export function initChatService(runtimeConfig: { apiKey: string; baseUrl?: string; model?: string; sessionsRoot: string }) {
+export function initChatService(runtimeConfig: { apiKey: string; baseUrl?: string; model?: string; sessionsRoot: string; projectRoot?: string }) {
+	const permissionConfig = runtimeConfig.projectRoot ? loadPermissionConfig(runtimeConfig.projectRoot) : undefined
 	const runtimeCache = new Map<string, Runtime>()
 
 	function getRuntimeForSession(sessionId: string): Runtime {
 		const cached = runtimeCache.get(sessionId)
 		if (cached) return cached
 
-		const runtime = createRuntime({ ...runtimeConfig, sessionId })
+		const runtime = createRuntime({ ...runtimeConfig, sessionId, permissionConfig })
 		runtimeCache.set(sessionId, runtime)
 		return runtime
 	}
@@ -31,7 +33,7 @@ export function initChatService(runtimeConfig: { apiKey: string; baseUrl?: strin
 	return {
 		async *chat(params: ChatParams): AsyncIterable<SSEEvent> {
 			const { message, sessionId } = params
-			const runtime = sessionId ? getRuntimeForSession(sessionId) : createRuntime(runtimeConfig)
+			const runtime = sessionId ? getRuntimeForSession(sessionId) : createRuntime({ ...runtimeConfig, permissionConfig })
 
 			try {
 				for await (const event of runtime.chat(message, {

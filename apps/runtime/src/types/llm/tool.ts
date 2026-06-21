@@ -205,3 +205,22 @@ export interface SessionMetrics {
 	/** 按工具名称聚合的指标 */
 	tools: Record<string, ToolMetrics>
 }
+
+/**
+ * 指标快照
+ * 每次指标变化后通过回调推送
+ */
+export type MetricsSnapshot = SessionMetrics
+
+/**
+ * 权限配置
+ * 对应项目根目录的 permission.json
+ */
+export interface PermissionConfig {
+	/** 允许的工具名模式列表，默认 ["*"] */
+	allow?: string[]
+	/** 需确认的工具名模式列表，默认 [] */
+	check?: string[]
+	/** 拒绝的工具名模式列表，默认 [] */
+	deny?: string[]
+}

@@ -1,0 +1,7 @@
+{
+	"allow": [],
+	"check": [],
+	"deny": [
+		"weather.getWeather"
+	]
+}
