@@ -49,3 +49,11 @@ export interface SessionDetail {
   canonicalMessagesCount: number
   contextMessagesCount: number
 }
+
+/** Memory 状态（从 GET /api/session/:id/memory 获取） */
+export interface MemoryState {
+  summaries: Array<{ summary: string }>
+  facts: Array<{ category: string; content: string }>
+  contextMessagesCount: number
+  canonicalMessagesCount: number
+}

@@ -68,7 +68,7 @@ export function SessionTab() {
 			</div>
 			<div className={styles.row}>
 				<span className={styles.label}>Message Count</span>
-				<span className={styles.value}>{detail.messageCount}</span>
+				<span className={styles.value}>{detail.canonicalMessagesCount}</span>
 			</div>
 		</div>
 	)

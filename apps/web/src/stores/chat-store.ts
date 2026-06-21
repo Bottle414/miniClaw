@@ -135,7 +135,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 	deleteSession: (id) => {
 		const { sessions, activeSessionId, messagesMap } = get()
 		const newSessions = sessions.filter((s) => s.id !== id)
-		const { [id]: _, ...restMessages } = messagesMap
+		const { [id]: _removed, ...restMessages } = messagesMap
 		const newActiveId = activeSessionId === id ? null : activeSessionId
 		set({
 			sessions: newSessions,
@@ -152,37 +152,39 @@ export const useChatStore = create<ChatState>((set, get) => ({
 		let sid = activeSessionId
 		if (!sid) {
 			sid = createSessionId()
+			const newSid = sid
 			const title = content.length > 30 ? content.slice(0, 30) + "…" : content
-			const newSession: ChatSession = { id: sid, title, updatedAt: Date.now() }
+			const newSession: ChatSession = { id: newSid, title, updatedAt: Date.now() }
 			set((s) => ({
-				activeSessionId: sid,
+				activeSessionId: newSid,
 				sessions: [newSession, ...s.sessions],
-				messagesMap: { ...s.messagesMap, [sid]: [] },
+				messagesMap: { ...s.messagesMap, [newSid]: [] },
 				messages: []
 			}))
 		}
 
+		const sessionId = sid
 		const userMsg = createUserMessage(content)
 		set((s) => {
-			const updated = [...(s.messagesMap[sid!] ?? []), userMsg]
+			const updated = [...(s.messagesMap[sessionId] ?? []), userMsg]
 			return {
-				messagesMap: { ...s.messagesMap, [sid!]: updated },
+				messagesMap: { ...s.messagesMap, [sessionId]: updated },
 				messages: updated,
 				isStreaming: true
 			}
 		})
 
 		try {
-			let currentMessages = [...(messagesMap[sid] ?? []), userMsg]
+			let currentMessages = [...(messagesMap[sessionId] ?? []), userMsg]
 
-			for await (const event of streamChat(content, sid)) {
+			for await (const event of streamChat(content, sessionId)) {
 				currentMessages = processEvent(currentMessages, event)
 				processRuntimeEvent(event)
 
 				const capturedMessages = currentMessages
 				set((s) => ({
-					messagesMap: { ...s.messagesMap, [sid!]: capturedMessages },
-					messages: s.activeSessionId === sid ? capturedMessages : s.messages
+					messagesMap: { ...s.messagesMap, [sessionId]: capturedMessages },
+					messages: s.activeSessionId === sessionId ? capturedMessages : s.messages
 				}))
 			}
 		} catch (err) {
@@ -194,16 +196,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
 				isComplete: true
 			}
 			set((s) => {
-				const updated = [...(s.messagesMap[sid!] ?? []), errorMsg]
+				const updated = [...(s.messagesMap[sessionId] ?? []), errorMsg]
 				return {
-					messagesMap: { ...s.messagesMap, [sid!]: updated },
-					messages: s.activeSessionId === sid ? updated : s.messages
+					messagesMap: { ...s.messagesMap, [sessionId]: updated },
+					messages: s.activeSessionId === sessionId ? updated : s.messages
 				}
 			})
 		} finally {
 			set((s) => ({
 				isStreaming: false,
-				sessions: s.sessions.map((session) => (session.id === sid ? { ...session, updatedAt: Date.now() } : session))
+				sessions: s.sessions.map((session) => (session.id === sessionId ? { ...session, updatedAt: Date.now() } : session))
 			}))
 		}
 	}
