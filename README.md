@@ -15,15 +15,18 @@ miniClaw 是一个用于理解 Agent 运行模式的学习项目，旨在深入�
 - **双层配置** - 运行时配置 + 任务级动态配置
 - **Provider 适配** - 统一 LLM 类型层，通过 Adaptor 适配多模型
 
-### 进阶功能（规划中）
+### 进阶功能
 
 - Session System - 当前任务、消息、工具调用管理
 - 可视化界面 - 面向用户的 Web UI
 - 多模型切换
+- 语音支持
+
+### 进阶功能（规划中）
+
 - MCP (Model Context Protocol)
 - Agent to UI 系统
 - Computer Use / Browser Use
-- 语音支持
 
 ## 架构概览
 

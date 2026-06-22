@@ -11,13 +11,22 @@ export interface UserConfig {
 	detail: string
 	/** 助手性格 */
 	soul: string
+	/** 当前模型 */
+	model: string
+	/** DeepSeek API Key */
+	deepseekApiKey: string
+	/** GLM API Key */
+	glmApiKey: string
 }
 
 const defaultUserConfig: UserConfig = {
 	name: "",
 	identity: "",
 	detail: "",
-	soul: ""
+	soul: "",
+	model: "deepseek-v4-flash",
+	deepseekApiKey: "",
+	glmApiKey: ""
 }
 
 /** 初始化 userConfigService */
@@ -27,7 +36,7 @@ export function initUserConfigService(projectRoot: string) {
 	async function readConfig(): Promise<UserConfig> {
 		try {
 			const content = await readFile(configPath, "utf-8")
-			return { ...defaultUserConfig, ...JSON.parse(content) as Partial<UserConfig> }
+			return { ...defaultUserConfig, ...(JSON.parse(content) as Partial<UserConfig>) }
 		} catch {
 			return { ...defaultUserConfig }
 		}

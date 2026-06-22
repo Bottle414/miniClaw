@@ -1,13 +1,14 @@
 /**
  * SettingsModal 组件
  *
- * 设置弹窗，包含个性化和权限配置两个 Tab
+ * 设置弹窗，包含个性化、API_KEY、权限配置三个 Tab
  */
 
 import { useEffect } from "react"
 import { Modal, Tabs } from "antd"
 
 import { useSettingsStore } from "../../../stores/settings-store"
+import { ApiKeyTab } from "./ApiKeyTab"
 import { PersonalizationTab } from "./PersonalizationTab"
 import { PermissionTab } from "./PermissionTab"
 import styles from "./index.module.css"
@@ -35,6 +36,11 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
 			key: "personalization",
 			label: "个性化",
 			children: <PersonalizationTab />
+		},
+		{
+			key: "apikey",
+			label: "API_KEY",
+			children: <ApiKeyTab />
 		},
 		{
 			key: "permission",

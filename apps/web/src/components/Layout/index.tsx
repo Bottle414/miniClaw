@@ -7,6 +7,7 @@
 import { useEffect } from "react"
 
 import { useChatStore } from "../../stores/chat-store"
+import { useSettingsStore } from "../../stores/settings-store"
 import { useUIStore } from "../../stores/ui-store"
 import { Sidebar } from "../Sidebar"
 import { Chat } from "../Chat"
@@ -16,10 +17,12 @@ import styles from "./index.module.css"
 function Layout() {
 	const { sidebarOpen, inspectorOpen } = useUIStore()
 	const { loadSessions, initialized } = useChatStore()
+	const { loadUserConfig } = useSettingsStore()
 
 	useEffect(() => {
 		if (!initialized) loadSessions()
-	}, [initialized, loadSessions])
+		loadUserConfig()
+	}, [initialized, loadSessions, loadUserConfig])
 
 	return (
 		<div className={styles.container}>

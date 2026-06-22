@@ -108,20 +108,6 @@ export function createRuntime(options: RuntimeOptions): Runtime {
 		if (session.messages.length > 0) {
 			messages.length = 0
 			messages.push(...session.messages)
-		} else if (config.soulPrompt) {
-			// 新 session：添加 soulPrompt
-			messages.push({
-				role: "system",
-				content: config.soulPrompt
-			})
-		}
-
-		// 新 session：注入 userPrompt（用户自定义提示词）
-		if (session.messages.length === 0 && config.userPrompt) {
-			messages.push({
-				role: "system",
-				content: config.userPrompt
-			})
 		}
 
 		// 将 session 的 summary 和 facts 注入到 RuntimeMemoryState

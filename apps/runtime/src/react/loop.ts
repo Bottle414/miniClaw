@@ -247,8 +247,18 @@ async function* executeActPhase(
 		summarizer
 	})
 
+	// 动态注入 soulPrompt 和 userPrompt（不写入 session 历史，改配置立即生效）
+	const injectedMessages: LLMMessage[] = []
+	if (config.soulPrompt) {
+		injectedMessages.push({ role: "system", content: config.soulPrompt })
+	}
+	if (config.userPrompt) {
+		injectedMessages.push({ role: "system", content: config.userPrompt })
+	}
+	injectedMessages.push(...contextMessages)
+
 	for await (const event of provider.chatStream({
-		messages: contextMessages,
+		messages: injectedMessages,
 		model: config.model,
 		tools
 	})) {

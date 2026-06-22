@@ -9,6 +9,20 @@ import { serializeEvent } from "../utils/index.js"
 import { buildUserPrompt, buildSoulPrompt } from "./user-config.js"
 import type { UserConfig } from "./user-config.js"
 
+/** 根据 model 名称推断 provider 类型 */
+function inferProvider(model: string): LLMProviderType {
+	if (model.startsWith("glm")) return "glm"
+	return "deepseek"
+}
+
+/** 根据 provider 类型从 userConfig 取对应 API Key，fallback 到环境变量 */
+function resolveApiKey(provider: LLMProviderType, userConfig?: UserConfig, envApiKey?: string): string {
+	if (provider === "glm") {
+		return userConfig?.glmApiKey || envApiKey || ""
+	}
+	return userConfig?.deepseekApiKey || envApiKey || ""
+}
+
 /** Chat 请求参数 */
 export interface ChatParams {
 	message: string
@@ -65,17 +79,22 @@ export function initChatService(
 	getUserConfig?: () => Promise<UserConfig>
 ) {
 	const permissionConfig = runtimeConfig.projectRoot ? loadPermissionConfig(runtimeConfig.projectRoot) : undefined
+	// 缓存 key = sessionId:model，模型切换后创建新 runtime
 	const runtimeCache = new Map<string, Runtime>()
 
 	function getRuntimeForSession(sessionId: string, userConfig?: UserConfig): Runtime {
-		const cached = runtimeCache.get(sessionId)
+		const model = userConfig?.model || runtimeConfig.model || "deepseek-v4-flash"
+		const cacheKey = `${sessionId}:${model}`
+		const cached = runtimeCache.get(cacheKey)
 		if (cached) return cached
 
+		const provider = inferProvider(model)
+		const apiKey = resolveApiKey(provider, userConfig, runtimeConfig.apiKey)
 		const onMetricsUpdate = createMetricsWriter(runtimeConfig.sessionsRoot, sessionId)
 		const userPrompt = userConfig ? buildUserPrompt(userConfig) : undefined
 		const soulPrompt = userConfig ? buildSoulPrompt(userConfig) : undefined
-		const runtime = createRuntime({ ...runtimeConfig, sessionId, permissionConfig, onMetricsUpdate, userPrompt, soulPrompt })
-		runtimeCache.set(sessionId, runtime)
+		const runtime = createRuntime({ ...runtimeConfig, apiKey, provider, model, sessionId, permissionConfig, onMetricsUpdate, userPrompt, soulPrompt })
+		runtimeCache.set(cacheKey, runtime)
 		return runtime
 	}
 
@@ -93,10 +112,16 @@ export function initChatService(
 				}
 			}
 
+			const model = userConfig?.model || runtimeConfig.model || "deepseek-v4-flash"
+			const provider = inferProvider(model)
+			const apiKey = resolveApiKey(provider, userConfig, runtimeConfig.apiKey)
 			const runtime = sessionId
 				? getRuntimeForSession(sessionId, userConfig)
 				: createRuntime({
 						...runtimeConfig,
+						apiKey,
+						provider,
+						model,
 						permissionConfig,
 						userPrompt: userConfig ? buildUserPrompt(userConfig) : undefined,
 						soulPrompt: userConfig ? buildSoulPrompt(userConfig) : undefined

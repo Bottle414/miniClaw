@@ -12,6 +12,9 @@ export interface UserConfig {
 	identity: string
 	detail: string
 	soul: string
+	model: string
+	deepseekApiKey: string
+	glmApiKey: string
 }
 
 /** 工具信息 */
@@ -43,6 +46,8 @@ interface SettingsState {
 	loadUserConfig: () => Promise<void>
 	/** 更新用户配置 */
 	updateUserConfig: (config: Partial<UserConfig>) => Promise<void>
+	/** 切换模型 */
+	switchModel: (model: string) => Promise<void>
 	/** 加载工具列表 */
 	loadTools: () => Promise<void>
 	/** 加载权限配置 */
@@ -57,7 +62,10 @@ const defaultUserConfig: UserConfig = {
 	name: "",
 	identity: "",
 	detail: "",
-	soul: ""
+	soul: "",
+	model: "deepseek-v4-flash",
+	deepseekApiKey: "",
+	glmApiKey: ""
 }
 
 const defaultPermission: PermissionConfig = {
@@ -94,6 +102,19 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 				method: "PUT",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify(updated)
+			})
+		} catch {
+			// 静默失败
+		}
+	},
+
+	switchModel: async (model) => {
+		set({ userConfig: { ...get().userConfig, model } })
+		try {
+			await fetch("/api/user-config", {
+				method: "PUT",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ model })
 			})
 		} catch {
 			// 静默失败

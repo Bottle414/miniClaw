@@ -1,15 +1,22 @@
 /**
  * ChatInput 组件
  *
- * 底部固定输入框 + 发送按钮，使用 antd Input
+ * 底部固定输入框 + 发送按钮 + 模型切换，使用 antd Input
  */
 
 import { AudioOutlined, SendOutlined } from "@ant-design/icons"
-import { Button, Input, message } from "antd"
+import { Button, Input, Select, message } from "antd"
 import { useRef, useState } from "react"
 
 import styles from "./index.module.css"
 import { useSpeechRecognition } from "../../../hooks/speech"
+import { useSettingsStore } from "../../../stores/settings-store"
+
+/** 可选模型列表 */
+const MODEL_OPTIONS = [
+	{ value: "deepseek-v4-flash", label: "DeepSeek V4" },
+	{ value: "glm-5.1", label: "GLM-5.1" }
+]
 
 interface ChatInputProps {
 	/** 发送消息回调 */
@@ -29,6 +36,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
 	const [value, setValue] = useState("")
 	const [voiceState, setVoiceState] = useState<VoiceState>("idle")
 	const baseValueRef = useRef("")
+	const { userConfig, switchModel } = useSettingsStore()
 
 	const { start, abort } = useSpeechRecognition(
 		(text) => {
@@ -68,21 +76,34 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
 
 	return (
 		<div className={styles.inputArea}>
-			<Input
-				value={value}
-				onChange={(e) => setValue(e.target.value)}
-				onKeyDown={handleKeyDown}
-				placeholder="Send a message..."
-				disabled={disabled}
-				size="large"
-				style={{ borderRadius: 24, flex: 1, height: 50 }}
-			/>
-			<button className={styles.sendBtn} onClick={handleSubmit} disabled={disabled || !value.trim()} aria-label="Send message">
-				<SendOutlined />
-			</button>
-			<Button size="large" icon={<AudioOutlined />} onClick={handleRecord} loading={voiceState !== "idle"} disabled={false}>
-				{voiceLabel[voiceState]}
-			</Button>
+			<div className={styles.inputRow}>
+				<Input
+					value={value}
+					onChange={(e) => setValue(e.target.value)}
+					onKeyDown={handleKeyDown}
+					placeholder="Send a message..."
+					disabled={disabled}
+					size="large"
+					style={{ borderRadius: 24, flex: 1, height: 50 }}
+				/>
+				<button className={styles.sendBtn} onClick={handleSubmit} disabled={disabled || !value.trim()} aria-label="Send message">
+					<SendOutlined />
+				</button>
+				<Button size="large" icon={<AudioOutlined />} onClick={handleRecord} loading={voiceState !== "idle"} disabled={false}>
+					{voiceLabel[voiceState]}
+				</Button>
+			</div>
+			<div className={styles.modelRow}>
+				<Select
+					value={userConfig.model}
+					onChange={switchModel}
+					options={MODEL_OPTIONS}
+					size="small"
+					variant="borderless"
+					className={styles.modelSelect}
+					popupMatchSelectWidth={false}
+				/>
+			</div>
 		</div>
 	)
 }

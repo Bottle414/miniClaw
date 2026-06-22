@@ -5,6 +5,7 @@
  */
 
 import { create } from "zustand"
+import { message } from "antd"
 import { v4 as uuidv4 } from "uuid"
 
 import type { ChatMessage } from "../types/message"
@@ -187,6 +188,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
 			for await (const event of streamChat(content, sessionId)) {
 				currentMessages = processEvent(currentMessages, event)
 				processRuntimeEvent(event)
+
+				// 检测 API Key 认证失败错误
+				if (event.type === "error") {
+					const errMsg = (event as { error?: { message?: string } }).error?.message ?? ""
+					if (errMsg.includes("401") || errMsg.includes("认证失败") || errMsg.includes("Incorrect API key") || errMsg.includes("API Key")) {
+						message.error("API Key 无效或未配置，请在设置中配置 API Key")
+					}
+				}
 
 				const capturedMessages = currentMessages
 				set((s) => ({
