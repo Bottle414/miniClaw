@@ -5,7 +5,7 @@
  */
 
 import { DeleteOutlined } from "@ant-design/icons"
-import { message, Popconfirm } from "antd"
+import { Button, message, Popconfirm } from "antd"
 import dayjs from "dayjs"
 
 import type { ChatSession } from "../../../types/session"
@@ -61,15 +61,12 @@ export function SessionList({ sessions, activeId, onSelect, onDelete }: SessionL
 						onCancel={(e) => e?.stopPropagation()}
 						okText="删除"
 						cancelText="取消"
-						okButtonProps={{ danger: true }}
+						okButtonProps={{ danger: true, size: "middle" }}
+						cancelButtonProps={{ size: "middle" }}
 					>
-						<button
-							className={styles.deleteBtn}
-							onClick={(e) => e.stopPropagation()}
-							aria-label="Delete session"
-						>
+						<Button className={styles.deleteBtn} onClick={(e) => e.stopPropagation()} aria-label="Delete session">
 							<DeleteOutlined />
-						</button>
+						</Button>
 					</Popconfirm>
 				</div>
 			))}
