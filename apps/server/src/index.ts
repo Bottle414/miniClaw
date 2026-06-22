@@ -30,11 +30,7 @@ const envFile = process.env.NODE_ENV === "production" ? ".env" : ".env.dev"
 dotenv.config({ path: path.resolve(projectRoot, envFile) })
 
 // 基础配置
-const apiKey = process.env.API_KEY
-if (!apiKey) {
-	console.error("Error: API_KEY environment variable is required")
-	process.exit(1)
-}
+const apiKey = process.env.API_KEY ?? ""
 
 const runtimeConfig = {
 	apiKey,

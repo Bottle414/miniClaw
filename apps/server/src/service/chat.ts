@@ -15,12 +15,12 @@ function inferProvider(model: string): LLMProviderType {
 	return "deepseek"
 }
 
-/** 根据 provider 类型从 userConfig 取对应 API Key，fallback 到环境变量 */
-function resolveApiKey(provider: LLMProviderType, userConfig?: UserConfig, envApiKey?: string): string {
+/** 根据 provider 类型从 userConfig 取对应 API Key，未配置则返回空 */
+function resolveApiKey(provider: LLMProviderType, userConfig?: UserConfig): string {
 	if (provider === "glm") {
-		return userConfig?.glmApiKey || envApiKey || ""
+		return userConfig?.glmApiKey || ""
 	}
-	return userConfig?.deepseekApiKey || envApiKey || ""
+	return userConfig?.deepseekApiKey || ""
 }
 
 /** Chat 请求参数 */
@@ -89,7 +89,7 @@ export function initChatService(
 		if (cached) return cached
 
 		const provider = inferProvider(model)
-		const apiKey = resolveApiKey(provider, userConfig, runtimeConfig.apiKey)
+		const apiKey = resolveApiKey(provider, userConfig)
 		const onMetricsUpdate = createMetricsWriter(runtimeConfig.sessionsRoot, sessionId)
 		const userPrompt = userConfig ? buildUserPrompt(userConfig) : undefined
 		const soulPrompt = userConfig ? buildSoulPrompt(userConfig) : undefined
@@ -114,7 +114,14 @@ export function initChatService(
 
 			const model = userConfig?.model || runtimeConfig.model || "deepseek-v4-flash"
 			const provider = inferProvider(model)
-			const apiKey = resolveApiKey(provider, userConfig, runtimeConfig.apiKey)
+			const apiKey = resolveApiKey(provider, userConfig)
+
+			// API Key 未配置时直接返回错误
+			if (!apiKey) {
+				yield { event: "runtime-event", data: JSON.stringify({ type: "error", error: { message: "API Key 未配置，请在设置中配置 API Key", stack: "" } }) }
+				return
+			}
+
 			const runtime = sessionId
 				? getRuntimeForSession(sessionId, userConfig)
 				: createRuntime({
