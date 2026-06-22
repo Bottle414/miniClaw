@@ -28,8 +28,8 @@ export function Sidebar({ open }: SidebarProps) {
 		resetRuntimeEventProcessor()
 	}
 
-	const handleDelete = (id: string) => {
-		deleteSession(id)
+	const handleDelete = async (id: string): Promise<boolean> => {
+		return deleteSession(id)
 	}
 
 	return (

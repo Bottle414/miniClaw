@@ -49,7 +49,7 @@ interface ChatState {
 	/** 新建会话 */
 	newChat: () => void
 	/** 删除会话 */
-	deleteSession: (id: string) => void
+	deleteSession: (id: string) => Promise<boolean>
 	/** 发送消息 */
 	sendMessage: (content: string) => Promise<void>
 }
@@ -124,8 +124,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
 		set({ activeSessionId: null, messages: [] })
 	},
 
-	deleteSession: (id) => {
+	deleteSession: async (id) => {
 		const { sessions, activeSessionId, messagesMap } = get()
+
+		// 先乐观更新 UI
 		const newSessions = sessions.filter((s) => s.id !== id)
 		const { [id]: _removed, ...restMessages } = messagesMap
 		const newActiveId = activeSessionId === id ? null : activeSessionId
@@ -135,6 +137,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
 			messagesMap: restMessages,
 			messages: newActiveId ? (restMessages[newActiveId] ?? []) : []
 		})
+
+		// 调用服务端删除
+		try {
+			const res = await fetch(`/api/session/${id}`, { method: "DELETE" })
+			if (!res.ok) throw new Error()
+			return true
+		} catch {
+			return false
+		}
 	},
 
 	sendMessage: async (content) => {

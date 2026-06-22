@@ -4,6 +4,7 @@
  * 权限配置：工具列表 + 权限编辑
  */
 
+import { useEffect, useState } from "react"
 import { Button, Divider, Input, message, Tag } from "antd"
 
 import { useSettingsStore } from "../../../../stores/settings-store"
@@ -13,9 +14,26 @@ export function PermissionTab() {
 	const { tools, permission, updatePermission } = useSettingsStore()
 	const [messageApi, contextHolder] = message.useMessage()
 
+	// 本地 state 管理 TextArea 内容，避免 JSON 解析失败时无法输入
+	const [text, setText] = useState(() => JSON.stringify(permission, null, 2))
+
+	// 当 store 中的 permission 变化时（如从服务端加载），同步到本地
+	useEffect(() => {
+		setText(JSON.stringify(permission, null, 2))
+	}, [permission])
+
 	const handleSave = async () => {
-		await updatePermission(permission)
-		messageApi.success("已保存")
+		try {
+			const parsed = JSON.parse(text)
+			if (!Array.isArray(parsed.allow) || !Array.isArray(parsed.check) || !Array.isArray(parsed.deny)) {
+				messageApi.error("JSON 格式错误：需要 allow、check、deny 三个数组")
+				return
+			}
+			await updatePermission(parsed)
+			messageApi.success("已保存")
+		} catch {
+			messageApi.error("JSON 格式错误，请检查语法")
+		}
 	}
 
 	return (
@@ -40,15 +58,8 @@ export function PermissionTab() {
 				<div className={styles.editorLabel}>权限配置（JSON 格式）</div>
 				<Input.TextArea
 					rows={8}
-					value={JSON.stringify(permission, null, 2)}
-					onChange={(e) => {
-						try {
-							const parsed = JSON.parse(e.target.value)
-							if (Array.isArray(parsed.allow) && Array.isArray(parsed.check) && Array.isArray(parsed.deny)) {
-								useSettingsStore.setState({ permission: parsed })
-							}
-						} catch {}
-					}}
+					value={text}
+					onChange={(e) => setText(e.target.value)}
 					className={styles.editor}
 					placeholder='{"allow": ["*"], "check": [], "deny": []}'
 				/>

@@ -41,3 +41,14 @@ export async function metrics(req: Request, res: Response): Promise<void> {
 		res.status(500).json({ error: err instanceof Error ? err.message : String(err) })
 	}
 }
+
+/** DELETE /api/session/:id - 删除 session */
+export async function remove(req: Request, res: Response): Promise<void> {
+	try {
+		const id = req.params.id as string
+		await sessionService.deleteSession(id)
+		res.json({ success: true })
+	} catch (err) {
+		res.status(500).json({ error: err instanceof Error ? err.message : String(err) })
+	}
+}

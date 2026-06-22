@@ -93,6 +93,10 @@ export function initSessionService(sessionsRoot: string) {
 			} catch {
 				return null
 			}
+		},
+
+		async deleteSession(sessionId: string): Promise<void> {
+			await sessionManager.delete(sessionId)
 		}
 	}
 }

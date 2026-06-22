@@ -5,6 +5,7 @@
  */
 
 import { DeleteOutlined } from "@ant-design/icons"
+import { message, Popconfirm } from "antd"
 import dayjs from "dayjs"
 
 import type { ChatSession } from "../../../types/session"
@@ -18,7 +19,7 @@ interface SessionListProps {
 	/** 选择会话 */
 	onSelect: (id: string) => void
 	/** 删除会话 */
-	onDelete: (id: string) => void
+	onDelete: (id: string) => Promise<boolean>
 }
 
 function formatTime(timestamp: number): string {
@@ -26,28 +27,50 @@ function formatTime(timestamp: number): string {
 }
 
 export function SessionList({ sessions, activeId, onSelect, onDelete }: SessionListProps) {
+	const [messageApi, contextHolder] = message.useMessage()
+
+	const handleDelete = async (id: string) => {
+		const success = await onDelete(id)
+		if (success) {
+			messageApi.success("已删除")
+		} else {
+			messageApi.error("删除失败")
+		}
+	}
+
 	if (sessions.length === 0) {
 		return <p className={styles.empty}>No conversations yet</p>
 	}
 
 	return (
 		<div className={styles.list}>
+			{contextHolder}
 			{sessions.map((session) => (
 				<div key={session.id} className={`${styles.item} ${session.id === activeId ? styles.itemActive : ""}`} onClick={() => onSelect(session.id)}>
 					<div className={styles.itemContent}>
 						<span className={styles.itemTitle}>{session.title}</span>
 						<span className={styles.itemTime}>{formatTime(session.updatedAt)}</span>
 					</div>
-					<button
-						className={styles.deleteBtn}
-						onClick={(e) => {
-							e.stopPropagation()
-							onDelete(session.id)
+					<Popconfirm
+						title="删除会话"
+						description="确定要删除这个会话吗？"
+						onConfirm={(e) => {
+							e?.stopPropagation()
+							handleDelete(session.id)
 						}}
-						aria-label="Delete session"
+						onCancel={(e) => e?.stopPropagation()}
+						okText="删除"
+						cancelText="取消"
+						okButtonProps={{ danger: true }}
 					>
-						<DeleteOutlined />
-					</button>
+						<button
+							className={styles.deleteBtn}
+							onClick={(e) => e.stopPropagation()}
+							aria-label="Delete session"
+						>
+							<DeleteOutlined />
+						</button>
+					</Popconfirm>
 				</div>
 			))}
 		</div>
