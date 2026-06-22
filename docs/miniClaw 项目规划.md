@@ -51,16 +51,17 @@ miniClaw/
 ├── apps/
 │   ├── runtime/               # Agent 运行时 (@mini-claw/runtime)
 │   │   └── src/
-│   │       ├── adaptor/       #   适配层（DeepSeek adaptor）
+│   │       ├── adaptor/       #   适配层（DeepSeek adaptor，GLM 复用）
 │   │       ├── const/         #   常量
 │   │       ├── memory/        #   记忆层（存储、上下文构建、摘要）
 │   │       ├── prompts/       #   提示词（系统、ReAct、Soul）
-│   │       ├── provider/      #   接入层（DeepSeek Provider）
+│   │       ├── provider/      #   接入层（DeepSeek / GLM Provider）
 │   │       ├── react/         #   ReAct 循环
 │   │       ├── tools/         #   工具注册与执行
 │   │       ├── types/         #   类型定义
 │   │       ├── utils/         #   工具函数
 │   │       └── index.ts       #   入口
+│   ├── server/                # SSE 中转服务器 (@mini-claw/server)
 │   └── web/                   # Web UI (@mini-claw/web)
 ├── packages/                  # 共享包目录（预留）
 ├── docs/                      # 项目文档
@@ -95,12 +96,16 @@ miniClaw/
 - [x] 流式输出 - SSE 实时流式响应
 - [x] 双层配置 - 运行时配置 + 任务级动态配置
 - [x] Provider 适配 - 统一 LLM 类型层，通过 Adaptor 适配多模型
-- [ ] Session System - 当前任务、消息、工具调用管理
-- [ ] 可视化界面 - 面向用户的 Web UI
+- [x] Session System - 当前任务、消息、工具调用管理
+- [x] 可视化界面 - 面向用户的 Web UI（React + Zustand + Ant Design）
 
 2. 额外功能
 
-- [ ] 多模型切换
+- [x] 多模型切换 - DeepSeek / GLM 双 Provider，前端下拉切换
+- [x] 思考过程展示 - reasoning-delta 事件流，折叠展示，持久化到 reasoning.json
+- [x] 设置系统 - 个性化（称呼/身份/性格）、API Key 管理、权限配置
+- [x] 语音输入 - Web Speech API 封装，中文语音识别
+- [x] Runtime Inspector - ReAct 迭代时间线、工具执行记录、指标面板
 - [ ] MCP
 - [ ] Agent to UI 系统
 
@@ -108,7 +113,6 @@ miniClaw/
 
 - [ ] Computer Use
 - [ ] Browser Use
-- [ ] 支持语音
 
 # 六、已完成迭代
 
@@ -121,6 +125,13 @@ miniClaw/
 | 5   | react-streaming-output             | ReAct 循环流式输出、流式事件适配                                                        |
 | 6   | add-memory-system                  | 记忆存储（MemoryStore）、上下文构建器（保留/丢弃/注入/摘要）、确定性摘要器              |
 | 7   | add-structured-summary-compression | 结构化摘要压缩（Fact/SummaryResult/事实分类）、LLM 摘要生成器                           |
+| 8   | add-web-ui                         | Web 界面（React + Zustand + Ant Design）、SSE 连接、消息流、Inspector 面板              |
+| 9   | add-server                         | SSE 中转服务器（Express）、chat/session/metrics API 端点                                |
+| 10  | add-session-persistence            | Session 持久化（metadata/messages/summary/facts/reasoning JSON 文件）                   |
+| 11  | add-glm-provider                   | GLM Provider 接入（复用 deepseekAdapter）、多模型切换                                   |
+| 12  | add-reasoning-display              | 思考过程展示（reasoning-delta 事件、折叠展示、reasoning.json 持久化）                   |
+| 13  | add-settings-system                | 设置系统（个性化/API Key/权限配置）、userConfig 持久化、模型切换                        |
+| 14  | add-voice-input                    | 语音输入（Web Speech API 封装、中文识别、实时转写）                                     |
 
 # 七、参考文献
 

@@ -360,10 +360,10 @@ Act 阶段调用模型前执行：
 
 ```ts
 const { contextMessages, summaryResult } = await buildContext({
-    messages: state.messages,
-    memory,
-    options: contextOptions,
-    summarizer
+	messages: state.messages,
+	memory,
+	options: contextOptions,
+	summarizer
 })
 ```
 
@@ -371,10 +371,10 @@ const { contextMessages, summaryResult } = await buildContext({
 
 ```ts
 interface ReActLoopResult {
-    state: ReActState
-    response?: string
-    error?: Error
-    summaryResults: SummaryResult[]
+	state: ReActState
+	response?: string
+	error?: Error
+	summaryResults: SummaryResult[]
 }
 ```
 
@@ -445,7 +445,7 @@ Session Persistence 为 Memory System 增加持久化能力，使对话可恢复
 
 ### 存储结构
 
-每个 session 在存储根目录下创建一个文件夹，包含四个 JSON 文件：
+每个 session 在存储根目录下创建一个文件夹，包含五个 JSON 文件：
 
 ```text
 <sessionsRoot>/
@@ -454,21 +454,50 @@ Session Persistence 为 Memory System 增加持久化能力，使对话可恢复
     messages.json    — LLMMessage[]
     summary.json     — SummaryResult[]
     facts.json       — Fact[]
+    reasoning.json   — ReasoningEntry[]
 ```
 
 - `metadata.json` 包含 session 元数据，`createdAt` 和 `updatedAt` 使用 ISO 8601 字符串。
 - `messages.json` 保存完整对话历史，消息顺序与运行时一致。
 - `summary.json` 保存每次 Context Builder 产生的摘要结果。
 - `facts.json` 保存从所有摘要中提取的结构化事实。
+- `reasoning.json` 保存 LLM 思考过程，通过 `messageIndex` 与 messages 一一对应。reasoning 不注入到 LLM 上下文，仅用于前端 UI 渲染。
+
+### ReasoningEntry
+
+```ts
+interface ReasoningEntry {
+	/** 对应 messages 中的索引位置 */
+	messageIndex: number
+	/** 思考过程内容 */
+	reasoning: string
+}
+```
+
+reasoning 的数据流：
+
+```text
+LLM 流式响应 (reasoning-delta 事件)
+  → StreamMerger 累积为 LLMAssistantMessage.reasoning
+  → chat 完成后提取到 session.reasoning (ReasoningEntry[])
+  → 持久化到 reasoning.json
+  → 前端加载时通过 messageIndex 恢复到 ChatMessage.reasoning
+```
+
+设计要点：
+
+- reasoning 不注入到 LLM 上下文（initSession 只注入 summary/facts 到 memory）
+- 通过 `messageIndex` 而非消息 ID 关联，因为 messages 数组索引是稳定的
+- 旧 session 无 `reasoning.json` 时，load 返回空数组（向后兼容）
 
 ### MemoryStore 接口
 
 ```ts
 interface MemoryStore {
-    save(sessionId: string, data: SessionData): Promise<void>
-    load(sessionId: string): Promise<SessionData | null>
-    delete(sessionId: string): Promise<void>
-    exists(sessionId: string): Promise<boolean>
+	save(sessionId: string, data: SessionData): Promise<void>
+	load(sessionId: string): Promise<SessionData | null>
+	delete(sessionId: string): Promise<void>
+	exists(sessionId: string): Promise<boolean>
 }
 ```
 
@@ -478,12 +507,12 @@ MemoryStore 是持久化存储的统一抽象。当前默认实现为 `createFil
 
 ```ts
 function createSessionManager(store: MemoryStore, now?: () => number) {
-    return {
-        create: (options?: { id?: string, name?: string }) => Promise<Session>,
-        load: (sessionId: string) => Promise<Session | null>,
-        save: (session: Session) => Promise<void>,
-        delete: (sessionId: string) => Promise<void>,
-    }
+	return {
+		create: (options?: { id?: string; name?: string }) => Promise<Session>,
+		load: (sessionId: string) => Promise<Session | null>,
+		save: (session: Session) => Promise<void>,
+		delete: (sessionId: string) => Promise<void>
+	}
 }
 ```
 
@@ -514,22 +543,25 @@ SessionManager 使用函数+闭包模式（不使用 class），负责：
 ```ts
 // Session → SessionData（持久化）
 function sessionToData(session: Session): SessionData {
-    return {
-        metadata: { id, name, createdAt, updatedAt },
-        messages, summary, facts
-    }
+	return {
+		metadata: { id, name, createdAt, updatedAt },
+		messages,
+		summary,
+		facts,
+		reasoning
+	}
 }
 
 // SessionData → Session（运行时）
 function dataToSession(data: SessionData): Session {
-    return { ...metadata, messages, summary, facts }
+	return { ...metadata, messages, summary, facts, reasoning }
 }
 ```
 
 ### 环境变量
 
-| 变量 | 说明 | 默认值 |
-|------|------|--------|
-| `SESSIONS_ROOT` | session 存储根目录 | `<cwd>/.sessions` |
-| `SESSION_ID` | 要加载的 session ID | 无（创建新 session） |
-| `SESSION_NAME` | session 名称 | `session-<id>` |
+| 变量            | 说明                | 默认值               |
+| --------------- | ------------------- | -------------------- |
+| `SESSIONS_ROOT` | session 存储根目录  | `<cwd>/.sessions`    |
+| `SESSION_ID`    | 要加载的 session ID | 无（创建新 session） |
+| `SESSION_NAME`  | session 名称        | `session-<id>`       |
