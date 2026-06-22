@@ -40,6 +40,7 @@ test("create generates UUID v4 when id not provided", async () => {
 	assert.equal(session.messages.length, 0)
 	assert.equal(session.summary.length, 0)
 	assert.equal(session.facts.length, 0)
+	assert.equal(session.reasoning.length, 0)
 })
 
 test("create uses provided id and name", async () => {

@@ -7,6 +7,7 @@ import type { ProviderEvent } from "../types/event"
  */
 export function mergeStreamMessage(events: ProviderEvent[]): LLMAssistantMessage | null {
 	let content = ""
+	let reasoning = ""
 	const toolCallMap = new Map<string, { name: string; arguments: string }>()
 	let finished = false
 
@@ -14,6 +15,9 @@ export function mergeStreamMessage(events: ProviderEvent[]): LLMAssistantMessage
 		switch (event.type) {
 			case "text-delta":
 				content += event.delta
+				break
+			case "reasoning-delta":
+				reasoning += event.delta
 				break
 			case "tool-call-start":
 				toolCallMap.set(event.toolCallId, { name: event.toolName, arguments: "" })
@@ -47,7 +51,8 @@ export function mergeStreamMessage(events: ProviderEvent[]): LLMAssistantMessage
 	return {
 		role: "assistant",
 		content: content || null,
-		toolCalls: toolCalls.length > 0 ? toolCalls : undefined
+		toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+		reasoning: reasoning || undefined
 	}
 }
 
@@ -57,6 +62,7 @@ export function mergeStreamMessage(events: ProviderEvent[]): LLMAssistantMessage
  */
 export function createStreamMerger() {
 	let content = ""
+	let reasoning = ""
 	const toolCallMap = new Map<string, { name: string; arguments: string }>()
 	let finished = false
 
@@ -66,6 +72,9 @@ export function createStreamMerger() {
 			switch (event.type) {
 				case "text-delta":
 					content += event.delta
+					break
+				case "reasoning-delta":
+					reasoning += event.delta
 					break
 				case "tool-call-start":
 					toolCallMap.set(event.toolCallId, { name: event.toolName, arguments: "" })
@@ -100,7 +109,8 @@ export function createStreamMerger() {
 			return {
 				role: "assistant",
 				content: content || null,
-				toolCalls: toolCalls.length > 0 ? toolCalls : undefined
+				toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+				reasoning: reasoning || undefined
 			}
 		}
 	}

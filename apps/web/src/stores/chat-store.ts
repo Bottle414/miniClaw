@@ -102,12 +102,19 @@ export const useChatStore = create<ChatState>((set, get) => ({
 			.then((data) => {
 				if (data.error) return
 
+				// 构建 messageIndex → reasoning 的映射
+				const reasoningMap = new Map<number, string>()
+				for (const entry of (data.reasoning ?? []) as Array<{ messageIndex: number; reasoning: string }>) {
+					reasoningMap.set(entry.messageIndex, entry.reasoning)
+				}
+
 				const loadedMessages: ChatMessage[] = (data.messages ?? []).map((msg: { role: string; content: string }, i: number) => ({
 					id: `loaded-${i}`,
 					role: msg.role as "user" | "assistant",
 					content: msg.content,
 					segments: [{ type: "text" as const, content: msg.content }],
-					isComplete: true
+					isComplete: true,
+					reasoning: reasoningMap.get(i) || undefined
 				}))
 				// 用消息内容兜底标题
 				const title = deriveTitle(data.name ?? "", loadedMessages) || "New Chat"

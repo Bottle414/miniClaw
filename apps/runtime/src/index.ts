@@ -8,7 +8,7 @@ export type { RuntimeOptions, Runtime, ChatOptions, LLMProviderType } from "./ty
 // 重导出常用类型，方便外部使用
 export type { RuntimeEvent } from "./types/event"
 export type { Config } from "./types/config"
-export type { ContextBuilderOptions, Session, SummaryResult, SessionMetadata, Fact } from "./memory/types"
+export type { ContextBuilderOptions, Session, SummaryResult, SessionMetadata, Fact, ReasoningEntry } from "./memory/types"
 export type { MetricsSnapshot, ToolMetrics, PermissionConfig } from "./types/llm/tool"
 export { loadPermissionConfig } from "./tools/middlewares/permission"
 
@@ -32,7 +32,7 @@ import { mathCalculate } from "./tools/math"
 import { createLLMSummarizer, createFileSystemMemoryStore, createRuntimeMemoryState, createSessionManager, setSessionMemory } from "./memory"
 import { executeReActLoop } from "./react/loop"
 
-import type { LLMMessage } from "./types/llm"
+import type { LLMMessage, LLMAssistantMessage } from "./types/llm"
 import type { RuntimeEvent } from "./types/event"
 import type { Session, SummaryResult } from "./memory/types"
 import type { RuntimeOptions, Runtime, ChatOptions } from "./types/runtime"
@@ -195,6 +195,17 @@ export function createRuntime(options: RuntimeOptions): Runtime {
 					session.summary = summaryResults
 					session.facts = summaryResults.flatMap((sr) => sr.extractedFacts)
 				}
+
+				// 从 assistant 消息中提取 reasoning，与 messages 一一对应
+				session.reasoning = messages
+					.map((msg, index) => {
+						if (msg.role !== "assistant") return null
+						const assistantMsg = msg as LLMAssistantMessage
+						if (!assistantMsg.reasoning) return null
+						return { messageIndex: index, reasoning: assistantMsg.reasoning }
+					})
+					.filter((entry): entry is { messageIndex: number; reasoning: string } => entry !== null)
+
 				await sessionManager.save(session)
 			}
 		}

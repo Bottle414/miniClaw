@@ -52,6 +52,8 @@ export interface LLMAssistantMessage {
 	content: string | null
 	/** 工具调用列表 */
 	toolCalls?: LLMToolCall[]
+	/** 思考过程内容（不注入上下文，仅用于前端 UI 渲染） */
+	reasoning?: string
 }
 
 /**

@@ -26,6 +26,7 @@ test("session round-trip: create → save messages → load → inject to runtim
 			createdAt: 1
 		})
 		session.facts.push({ category: "user-preference", content: "用户偏好中文" })
+		session.reasoning.push({ messageIndex: 1, reasoning: "thinking about the greeting" })
 		await manager.save(session)
 
 		// 3. 模拟新进程启动，加载 session
@@ -36,6 +37,11 @@ test("session round-trip: create → save messages → load → inject to runtim
 		const messages = [...loaded!.messages]
 		assert.equal(messages.length, 2)
 		assert.equal(messages[0]!.content, "hello")
+
+		// 验证 reasoning 持久化
+		assert.equal(loaded!.reasoning.length, 1)
+		assert.equal(loaded!.reasoning[0]!.messageIndex, 1)
+		assert.equal(loaded!.reasoning[0]!.reasoning, "thinking about the greeting")
 
 		// 5. 注入 summary/facts 到 RuntimeMemoryState
 		let memory = createRuntimeMemoryState()

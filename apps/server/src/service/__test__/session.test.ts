@@ -65,7 +65,8 @@ describe("sessionService", () => {
 					{ role: "system", content: "System prompt" }
 				],
 				summary: [{ summary: "Test summary", createdAt: 1500, sourceRange: [0, 1] as [number, number], extractedFacts: [] }],
-				facts: [{ category: "user-preference" as const, content: "likes coffee" }]
+				facts: [{ category: "user-preference" as const, content: "likes coffee" }],
+				reasoning: [{ messageIndex: 1, reasoning: "thinking about greeting" }]
 			}
 
 			const { createSessionManager } = await import("@mini-claw/runtime/memory")
@@ -87,6 +88,7 @@ describe("sessionService", () => {
 				],
 				summary: [{ summary: "Test summary", createdAt: 1500 }],
 				facts: [{ category: "user-preference", content: "likes coffee" }],
+				reasoning: [{ messageIndex: 1, reasoning: "thinking about greeting" }],
 				canonicalMessagesCount: 3,
 				contextMessagesCount: 0
 			})

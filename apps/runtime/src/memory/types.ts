@@ -121,6 +121,14 @@ export interface SessionMetadata {
 	updatedAt: string
 }
 
+/** 思考过程条目，与 messages 一一对应，仅 assistant 消息有值。 */
+export interface ReasoningEntry {
+	/** 对应消息在 messages 数组中的索引。 */
+	messageIndex: number
+	/** 思考过程内容。 */
+	reasoning: string
+}
+
 /** 持久化存储的 session 数据。 */
 export interface SessionData {
 	/** Session 元数据。 */
@@ -131,6 +139,8 @@ export interface SessionData {
 	summary: SummaryResult[]
 	/** 提取的事实列表。 */
 	facts: Fact[]
+	/** 思考过程列表，与 messages 一一对应，不注入上下文。 */
+	reasoning: ReasoningEntry[]
 }
 
 /** 运行时 Session 对象。 */
@@ -149,6 +159,8 @@ export interface Session {
 	summary: SummaryResult[]
 	/** 提取的事实列表。 */
 	facts: Fact[]
+	/** 思考过程列表，与 messages 一一对应，不注入上下文。 */
+	reasoning: ReasoningEntry[]
 }
 
 /** 持久化存储抽象接口。 */

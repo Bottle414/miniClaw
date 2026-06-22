@@ -22,6 +22,7 @@ export interface SessionDetail {
 	messages: Array<{ role: string; content: string }>
 	summary: Array<{ summary: string; createdAt: number }>
 	facts: Array<{ category: string; content: string }>
+	reasoning: Array<{ messageIndex: number; reasoning: string }>
 	canonicalMessagesCount: number
 	contextMessagesCount: number
 }
@@ -80,6 +81,7 @@ export function initSessionService(sessionsRoot: string) {
 				messages: convertMessages(session.messages),
 				summary: session.summary.map((s) => ({ summary: s.summary, createdAt: Number(s.createdAt) })),
 				facts: session.facts.map((f) => ({ category: f.category, content: f.content })),
+				reasoning: session.reasoning ?? [],
 				canonicalMessagesCount: session.messages.length,
 				contextMessagesCount: 0
 			}

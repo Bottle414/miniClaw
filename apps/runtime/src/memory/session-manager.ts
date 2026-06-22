@@ -15,7 +15,8 @@ export function createSessionManager(store: MemoryStore, now: () => number = () 
 			},
 			messages: session.messages,
 			summary: session.summary,
-			facts: session.facts
+			facts: session.facts,
+			reasoning: session.reasoning
 		}
 	}
 
@@ -28,7 +29,8 @@ export function createSessionManager(store: MemoryStore, now: () => number = () 
 			updatedAt: data.metadata.updatedAt,
 			messages: data.messages,
 			summary: data.summary,
-			facts: data.facts
+			facts: data.facts,
+			reasoning: data.reasoning
 		}
 	}
 
@@ -44,7 +46,8 @@ export function createSessionManager(store: MemoryStore, now: () => number = () 
 				updatedAt: timestamp.toString(),
 				messages: [],
 				summary: [],
-				facts: []
+				facts: [],
+				reasoning: []
 			}
 
 			await store.save(id, sessionToData(session))

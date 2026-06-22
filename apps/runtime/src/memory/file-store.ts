@@ -10,6 +10,7 @@ export function createFileSystemMemoryStore(sessionsRoot: string) {
 	const messagesPath = (sessionId: string) => path.join(sessionDir(sessionId), "messages.json")
 	const summaryPath = (sessionId: string) => path.join(sessionDir(sessionId), "summary.json")
 	const factsPath = (sessionId: string) => path.join(sessionDir(sessionId), "facts.json")
+	const reasoningPath = (sessionId: string) => path.join(sessionDir(sessionId), "reasoning.json")
 
 	async function writeJson(filePath: string, data: unknown): Promise<void> {
 		await fs.mkdir(path.dirname(filePath), { recursive: true })
@@ -33,7 +34,8 @@ export function createFileSystemMemoryStore(sessionsRoot: string) {
 				writeJson(metadataPath(sessionId), data.metadata),
 				writeJson(messagesPath(sessionId), data.messages),
 				writeJson(summaryPath(sessionId), data.summary),
-				writeJson(factsPath(sessionId), data.facts)
+				writeJson(factsPath(sessionId), data.facts),
+				writeJson(reasoningPath(sessionId), data.reasoning)
 			])
 		},
 
@@ -42,17 +44,19 @@ export function createFileSystemMemoryStore(sessionsRoot: string) {
 			const metadata = await readJson<SessionData["metadata"]>(metadataPath(sessionId))
 			if (!metadata) return null
 
-			const [messages, summary, facts] = await Promise.all([
+			const [messages, summary, facts, reasoning] = await Promise.all([
 				readJson<SessionData["messages"]>(messagesPath(sessionId)),
 				readJson<SessionData["summary"]>(summaryPath(sessionId)),
-				readJson<SessionData["facts"]>(factsPath(sessionId))
+				readJson<SessionData["facts"]>(factsPath(sessionId)),
+				readJson<SessionData["reasoning"]>(reasoningPath(sessionId))
 			])
 
 			return {
 				metadata,
 				messages: messages ?? [],
 				summary: summary ?? [],
-				facts: facts ?? []
+				facts: facts ?? [],
+				reasoning: reasoning ?? []
 			}
 		},
 

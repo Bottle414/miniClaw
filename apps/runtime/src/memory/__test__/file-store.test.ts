@@ -34,7 +34,8 @@ test("save writes four JSON files and load reads them back", async () => {
 					createdAt: 1
 				}
 			],
-			facts: [{ category: "task", content: "a fact" }]
+			facts: [{ category: "task", content: "a fact" }],
+			reasoning: [{ messageIndex: 1, reasoning: "thinking about hello" }]
 		}
 
 		await store.save("test-session-1", data)
@@ -45,7 +46,7 @@ test("save writes four JSON files and load reads them back", async () => {
 		// Verify individual files exist
 		const sessionDir = path.join(dir, "test-session-1")
 		const files = await fs.readdir(sessionDir)
-		assert.deepEqual(files.sort(), ["facts.json", "messages.json", "metadata.json", "summary.json"])
+		assert.deepEqual(files.sort(), ["facts.json", "messages.json", "metadata.json", "reasoning.json", "summary.json"])
 	} finally {
 		await rm(dir, { recursive: true, force: true })
 	}
@@ -77,7 +78,8 @@ test("exists returns true for saved session and false otherwise", async () => {
 			},
 			messages: [],
 			summary: [],
-			facts: []
+			facts: [],
+			reasoning: []
 		}
 		await store.save("exists-test", data)
 		assert.equal(await store.exists("exists-test"), true)
@@ -99,7 +101,8 @@ test("delete removes session files and folder", async () => {
 			},
 			messages: [],
 			summary: [],
-			facts: []
+			facts: [],
+			reasoning: []
 		}
 		await store.save("delete-test", data)
 		assert.equal(await store.exists("delete-test"), true)
@@ -145,6 +148,7 @@ test("load recovers gracefully from missing messages/summary/facts files", async
 		assert.equal(loaded!.messages.length, 0)
 		assert.equal(loaded!.summary.length, 0)
 		assert.equal(loaded!.facts.length, 0)
+		assert.equal(loaded!.reasoning.length, 0)
 	} finally {
 		await rm(dir, { recursive: true, force: true })
 	}
