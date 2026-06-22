@@ -98,6 +98,17 @@ export function processRuntimeEvent(event: SSERuntimeEvent): void {
 			break
 		}
 
+		case "summary": {
+			const { summary, extractedFacts, sourceRange } = event as {
+				type: "summary"
+				summary: string
+				extractedFacts: Array<{ category: string; content: string; source?: string }>
+				sourceRange: [number, number]
+			}
+			store.onSummary(summary, extractedFacts, sourceRange)
+			break
+		}
+
 		default:
 			break
 	}

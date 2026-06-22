@@ -51,6 +51,16 @@ export interface ToolRecord {
 	isComplete: boolean
 }
 
+/** 摘要记录 */
+export interface SummaryRecord {
+	/** 摘要文本 */
+	summary: string
+	/** 提取的事实 */
+	extractedFacts: Array<{ category: string; content: string; source?: string }>
+	/** 来源消息范围 */
+	sourceRange: [start: number, end: number]
+}
+
 /** Runtime 事件（从 SSE 接收的原始事件） */
 export interface RuntimeEventData {
 	type: string

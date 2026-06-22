@@ -6,13 +6,15 @@
 
 import { create } from "zustand"
 
-import type { IterationRecord, PhaseRecord, RuntimePhase, ToolRecord } from "../types/runtime"
+import type { IterationRecord, PhaseRecord, RuntimePhase, SummaryRecord, ToolRecord } from "../types/runtime"
 
 interface RuntimeState {
 	/** 迭代记录列表 */
 	iterations: IterationRecord[]
 	/** 工具执行记录列表 */
 	toolRecords: ToolRecord[]
+	/** 摘要记录列表 */
+	summaryRecords: SummaryRecord[]
 	/** 循环结束原因 */
 	loopEndReason: string | null
 	/** 总迭代次数 */
@@ -38,6 +40,8 @@ interface RuntimeState {
 	onLoopEnd: (reason: string, iterations: number) => void
 	/** 处理 deciding 阶段的终止原因 */
 	onDecidingTermination: (iteration: number, reason: string) => void
+	/** 处理 summary 事件 */
+	onSummary: (summary: string, extractedFacts: SummaryRecord["extractedFacts"], sourceRange: SummaryRecord["sourceRange"]) => void
 	/** 清空 Runtime 数据（新建会话时） */
 	clearRuntime: () => void
 }
@@ -51,6 +55,7 @@ function getActivePhaseIndex(iteration: IterationRecord): number {
 export const useRuntimeStore = create<RuntimeState>((set) => ({
 	iterations: [],
 	toolRecords: [],
+	summaryRecords: [],
 	loopEndReason: null,
 	totalIterations: 0,
 
@@ -167,10 +172,17 @@ export const useRuntimeStore = create<RuntimeState>((set) => ({
 		})
 	},
 
+	onSummary: (summary, extractedFacts, sourceRange) => {
+		set((s) => ({
+			summaryRecords: [...s.summaryRecords, { summary, extractedFacts, sourceRange }]
+		}))
+	},
+
 	clearRuntime: () => {
 		set({
 			iterations: [],
 			toolRecords: [],
+			summaryRecords: [],
 			loopEndReason: null,
 			totalIterations: 0
 		})

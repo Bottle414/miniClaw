@@ -61,6 +61,17 @@ export interface LoopEndEvent {
 	iterations: number
 }
 
+/** 摘要生成事件 */
+export interface SummaryEvent {
+	type: "summary"
+	/** 摘要文本 */
+	summary: string
+	/** 提取的事实 */
+	extractedFacts: Array<{ category: string; content: string; source?: string }>
+	/** 来源消息范围 */
+	sourceRange: [start: number, end: number]
+}
+
 /** 循环完成事件（携带最终结果） */
 export interface LoopCompleteEvent {
 	type: "loop-complete"
@@ -80,12 +91,7 @@ export interface LoopCompleteEvent {
  * Runtime Lifecycle 事件联合类型
  * Runtime 循环层级发出的事件
  */
-export type RuntimeLifecycleEvent =
-	| IterationStartEvent
-	| PhaseChangeEvent
-	| ToolExecuteEvent
-	| ToolResultEvent
-	| LoopEndEvent
+export type RuntimeLifecycleEvent = IterationStartEvent | PhaseChangeEvent | ToolExecuteEvent | ToolResultEvent | LoopEndEvent | SummaryEvent
 
 /**
  * Runtime Event 联合类型
@@ -93,7 +99,4 @@ export type RuntimeLifecycleEvent =
  * Provider 流式事件（透传）+ Runtime 生命周期事件
  * 通过 type 字段实现 discriminated union
  */
-export type RuntimeEvent =
-	| ProviderEvent
-	| RuntimeLifecycleEvent
-	| LoopCompleteEvent
+export type RuntimeEvent = ProviderEvent | RuntimeLifecycleEvent | LoopCompleteEvent

@@ -111,6 +111,8 @@ export function createRuntime(options: RuntimeOptions): Runtime {
 		}
 
 		// 将 session 的 summary 和 facts 注入到 RuntimeMemoryState
+		// 先重置 memory 再注入，确保替换式生效
+		memory = createRuntimeMemoryState()
 		for (const result of session.summary) {
 			memory = setSessionMemory(memory, {
 				id: `summary-${result.createdAt}`,
@@ -189,8 +191,9 @@ export function createRuntime(options: RuntimeOptions): Runtime {
 				// 持久化 session
 				session.messages = [...messages]
 				if (summaryResults.length > 0) {
-					session.summary.push(...summaryResults)
-					session.facts.push(...summaryResults.flatMap((sr) => sr.extractedFacts))
+					// 替换式摘要：新摘要替换旧摘要，而非追加
+					session.summary = summaryResults
+					session.facts = summaryResults.flatMap((sr) => sr.extractedFacts)
 				}
 				await sessionManager.save(session)
 			}

@@ -94,11 +94,21 @@ interface DecidePhaseResult {
  * 通过 AsyncIterable yield RuntimeEvent，消费者 for await...of 拉取
  */
 export async function* executeReActLoop(loopConfig: ReActLoopConfig): AsyncIterable<RuntimeEvent> {
-	const { provider, config, userInput, initialMessages = [], memory = createRuntimeMemoryState(), contextOptions, summarizer, sessionId, toolHandler } = loopConfig
+	const {
+		provider,
+		config,
+		userInput,
+		initialMessages = [],
+		memory = createRuntimeMemoryState(),
+		contextOptions,
+		summarizer,
+		sessionId,
+		toolHandler
+	} = loopConfig
 
 	// 初始化状态
 	let state = createInitialState()
-	const summaryResults: SummaryResult[] = []
+	let latestSummaryResult: SummaryResult | undefined
 
 	// 添加初始消息
 	for (const msg of initialMessages) {
@@ -129,7 +139,14 @@ export async function* executeReActLoop(loopConfig: ReActLoopConfig): AsyncItera
 			const actResult = yield* executeActPhase(state, provider, config, memory, contextOptions, summarizer, toolHandler)
 			state = actResult.state
 			if (actResult.summaryResult) {
-				summaryResults.push(actResult.summaryResult)
+				latestSummaryResult = actResult.summaryResult
+				// yield 摘要事件，供前端 Inspector 展示
+				yield {
+					type: "summary",
+					summary: actResult.summaryResult.summary,
+					extractedFacts: actResult.summaryResult.extractedFacts,
+					sourceRange: actResult.summaryResult.sourceRange
+				}
 			}
 
 			// 检查是否应该终止（最终答案或空响应）
@@ -176,7 +193,7 @@ export async function* executeReActLoop(loopConfig: ReActLoopConfig): AsyncItera
 			type: "loop-complete",
 			state,
 			response: lastMessage?.content ?? undefined,
-			summaryResults
+			summaryResults: latestSummaryResult ? [latestSummaryResult] : []
 		}
 	} catch (error) {
 		// yield 循环结束事件（错误）
@@ -191,7 +208,7 @@ export async function* executeReActLoop(loopConfig: ReActLoopConfig): AsyncItera
 			type: "loop-complete",
 			state,
 			error: error instanceof Error ? error : new Error(String(error)),
-			summaryResults
+			summaryResults: latestSummaryResult ? [latestSummaryResult] : []
 		}
 	}
 }

@@ -76,14 +76,49 @@ function PhaseContent({ phase }: { phase: PhaseRecord }) {
 }
 
 export function EventsTab() {
-	const { iterations, loopEndReason, totalIterations } = useRuntimeStore()
+	const { iterations, loopEndReason, totalIterations, summaryRecords } = useRuntimeStore()
 
-	if (iterations.length === 0 && !loopEndReason) {
+	if (iterations.length === 0 && !loopEndReason && summaryRecords.length === 0) {
 		return <div className={styles.empty}>No runtime events yet</div>
 	}
 
 	return (
 		<div className={styles.timeline}>
+			{summaryRecords.map((rec, idx) => (
+				<div key={idx} className={styles.iteration}>
+					<div className={styles.iterationHeader}>Summary</div>
+					<div className={styles.phaseList}>
+						<div className={`${styles.phaseItem} ${styles.phaseThinking}`}>
+							<div className={styles.phaseHeader}>
+								<span className={styles.phaseDot} />
+								<span className={styles.phaseLabel}>Context Summary</span>
+							</div>
+							<div className={styles.phaseContent}>
+								<div className={styles.phaseSection}>
+									<div className={styles.phaseSectionLabel}>Summary</div>
+									<pre className={styles.preBlock}>{rec.summary}</pre>
+								</div>
+								<div className={styles.phaseSection}>
+									<div className={styles.phaseSectionLabel}>Source Range</div>
+									<pre className={styles.preBlockSmall}>[{rec.sourceRange[0]}, {rec.sourceRange[1]}]</pre>
+								</div>
+								{rec.extractedFacts.length > 0 && (
+									<div className={styles.phaseSection}>
+										<div className={styles.phaseSectionLabel}>Extracted Facts</div>
+										{rec.extractedFacts.map((fact, fi) => (
+											<div key={fi} className={styles.toolCallItem}>
+												<span className={styles.toolCallName}>[{fact.category}]</span>
+												<span> {fact.content}</span>
+												{fact.source && <span className={styles.toolCallResult}> ({fact.source})</span>}
+											</div>
+										))}
+									</div>
+								)}
+							</div>
+						</div>
+					</div>
+				</div>
+			))}
 			{iterations.map((iter) => (
 				<div key={iter.iteration} className={styles.iteration}>
 					<div className={styles.iterationHeader}>Iteration {iter.iteration}</div>
