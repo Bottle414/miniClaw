@@ -6,6 +6,8 @@ import { loadPermissionConfig } from "@mini-claw/runtime"
 import type { Runtime, MetricsSnapshot, ToolMetrics } from "@mini-claw/runtime"
 
 import { serializeEvent } from "../utils/index.js"
+import { buildUserPrompt, buildSoulPrompt } from "./user-config.js"
+import type { UserConfig } from "./user-config.js"
 
 /** Chat 请求参数 */
 export interface ChatParams {
@@ -58,16 +60,21 @@ function createMetricsWriter(sessionsRoot: string, sessionId: string): (snapshot
 }
 
 /** 初始化 chatService，返回 chat 方法 */
-export function initChatService(runtimeConfig: { apiKey: string; baseUrl?: string; model?: string; sessionsRoot: string; projectRoot?: string }) {
+export function initChatService(
+	runtimeConfig: { apiKey: string; baseUrl?: string; model?: string; sessionsRoot: string; projectRoot?: string },
+	getUserConfig?: () => Promise<UserConfig>
+) {
 	const permissionConfig = runtimeConfig.projectRoot ? loadPermissionConfig(runtimeConfig.projectRoot) : undefined
 	const runtimeCache = new Map<string, Runtime>()
 
-	function getRuntimeForSession(sessionId: string): Runtime {
+	function getRuntimeForSession(sessionId: string, userConfig?: UserConfig): Runtime {
 		const cached = runtimeCache.get(sessionId)
 		if (cached) return cached
 
 		const onMetricsUpdate = createMetricsWriter(runtimeConfig.sessionsRoot, sessionId)
-		const runtime = createRuntime({ ...runtimeConfig, sessionId, permissionConfig, onMetricsUpdate })
+		const userPrompt = userConfig ? buildUserPrompt(userConfig) : undefined
+		const soulPrompt = userConfig ? buildSoulPrompt(userConfig) : undefined
+		const runtime = createRuntime({ ...runtimeConfig, sessionId, permissionConfig, onMetricsUpdate, userPrompt, soulPrompt })
 		runtimeCache.set(sessionId, runtime)
 		return runtime
 	}
@@ -75,7 +82,25 @@ export function initChatService(runtimeConfig: { apiKey: string; baseUrl?: strin
 	return {
 		async *chat(params: ChatParams): AsyncIterable<SSEEvent> {
 			const { message, sessionId } = params
-			const runtime = sessionId ? getRuntimeForSession(sessionId) : createRuntime({ ...runtimeConfig, permissionConfig })
+
+			// 读取用户配置，注入 userPrompt 和 soulPrompt
+			let userConfig: UserConfig | undefined
+			if (getUserConfig) {
+				try {
+					userConfig = await getUserConfig()
+				} catch {
+					// 读取失败时使用默认配置
+				}
+			}
+
+			const runtime = sessionId
+				? getRuntimeForSession(sessionId, userConfig)
+				: createRuntime({
+						...runtimeConfig,
+						permissionConfig,
+						userPrompt: userConfig ? buildUserPrompt(userConfig) : undefined,
+						soulPrompt: userConfig ? buildSoulPrompt(userConfig) : undefined
+					})
 
 			try {
 				for await (const event of runtime.chat(message, {

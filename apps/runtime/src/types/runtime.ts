@@ -29,6 +29,8 @@ export interface RuntimeOptions {
 	model?: string
 	/** 系统人格提示（可选）。 */
 	soulPrompt?: string
+	/** 用户自定义提示词（可选），作为 system 消息注入到 soulPrompt 之后。 */
+	userPrompt?: string
 	/** Session ID，用于加载已有 session（可选，不传则创建新 session）。 */
 	sessionId?: string
 	/** Session 名称（可选，创建新 session 时使用）。 */

@@ -1,0 +1,18 @@
+.tabs {
+  min-height: 420px;
+}
+
+.tabs :global(.ant-tabs-nav) {
+  min-width: 120px;
+}
+
+.tabs :global(.ant-tabs-tab) {
+  padding: 8px 16px;
+  font-size: 14px;
+}
+
+:global {
+  .ant-modal-title {
+    font-size: 20px;
+  }
+}

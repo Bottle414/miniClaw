@@ -11,12 +11,16 @@ import dotenv from "dotenv"
 import express from "express"
 import path from "node:path"
 
-import { HEALTH, SESSIONS, SESSION_DETAIL, SESSION_METRICS, CHAT } from "./constants.js"
+import { HEALTH, SESSIONS, SESSION_DETAIL, SESSION_METRICS, CHAT, USER_CONFIG, TOOLS, PERMISSION } from "./constants.js"
 import { initSessionService } from "./service/session.js"
 import { initChatService } from "./service/chat.js"
+import { initUserConfigService } from "./service/user-config.js"
+import { initToolService } from "./service/tool.js"
 import { healthCheck } from "./controller/health.js"
 import * as sessionController from "./controller/session.js"
 import * as chatController from "./controller/chat.js"
+import * as userConfigController from "./controller/user-config.js"
+import * as toolController from "./controller/tool.js"
 
 // 项目根目录（server 位于 apps/server/src/，向上三级）
 const projectRoot = path.resolve(import.meta.dirname, "../../..")
@@ -40,9 +44,11 @@ const runtimeConfig = {
 	projectRoot
 }
 
-// 初始化 service
+// 初始化 service（注意顺序：userService 需在 chatService 之前）
 export const sessionService = initSessionService(runtimeConfig.sessionsRoot)
-export const chatService = initChatService(runtimeConfig)
+export const userService = initUserConfigService(projectRoot)
+export const toolService = initToolService(projectRoot)
+export const chatService = initChatService(runtimeConfig, () => userService.get())
 
 // 创建 Express 应用
 const app = express()
@@ -63,6 +69,11 @@ app.get(SESSIONS, sessionController.list)
 app.get(SESSION_DETAIL, sessionController.detail)
 app.get(SESSION_METRICS, sessionController.metrics)
 app.post(CHAT, chatController.chat)
+app.get(USER_CONFIG, userConfigController.getUserConfig)
+app.put(USER_CONFIG, userConfigController.updateUserConfig)
+app.get(TOOLS, toolController.listTools)
+app.get(PERMISSION, toolController.getPermission)
+app.put(PERMISSION, toolController.updatePermission)
 
 // 启动服务器
 app.listen(PORT, () => {

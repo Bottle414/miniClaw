@@ -5,10 +5,12 @@
  * 折叠时搜索框显示为 SearchOutlined 图标，点击弹出 Modal
  */
 
-import { PlusOutlined, MenuFoldOutlined, SearchOutlined, RobotOutlined } from "@ant-design/icons"
+import { PlusOutlined, MenuFoldOutlined, SearchOutlined, RobotOutlined, SettingOutlined } from "@ant-design/icons"
 import { Input, Modal, Tooltip } from "antd"
 import { useState } from "react"
 
+import { useSettingsStore } from "../../../stores/settings-store"
+import { SettingsModal } from "../SettingsModal"
 import styles from "./index.module.css"
 
 interface SidebarIconsProps {
@@ -22,6 +24,7 @@ interface SidebarIconsProps {
 
 export function SidebarIcons({ open, onNewChat, onToggle }: SidebarIconsProps) {
 	const [searchModalOpen, setSearchModalOpen] = useState(false)
+	const { modalOpen: settingsOpen, setModalOpen: setSettingsOpen } = useSettingsStore()
 
 	return (
 		<>
@@ -53,12 +56,21 @@ export function SidebarIcons({ open, onNewChat, onToggle }: SidebarIconsProps) {
 						{open && <span className={styles.iconLabel}>折叠边栏</span>}
 					</button>
 				</Tooltip>
+
+				<Tooltip title={open ? "设置" : "设置"} placement="right">
+					<button className={styles.iconButton} onClick={() => setSettingsOpen(true)}>
+						<SettingOutlined />
+						{open && <span className={styles.iconLabel}>设置</span>}
+					</button>
+				</Tooltip>
 			</div>
 
 			<Modal title="Search Sessions" open={searchModalOpen} onCancel={() => setSearchModalOpen(false)} footer={null} width={600}>
 				<Input placeholder="Search sessions..." prefix={<SearchOutlined />} size="large" allowClear disabled style={{ marginBottom: 16 }} />
 				<div style={{ color: "var(--text-secondary)", fontSize: 13, textAlign: "center", padding: 16 }}>Search functionality coming soon</div>
 			</Modal>
+
+			<SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
 		</>
 	)
 }

@@ -12,6 +12,7 @@ export interface CreateConfigOptions {
 	baseUrl?: string
 	model?: string
 	soulPrompt?: string
+	userPrompt?: string
 }
 
 /**
@@ -42,7 +43,7 @@ export function createConfig(options: CreateConfigOptions): Config {
 		apiKey: options.apiKey,
 		model: options.model || "deepseek-chat",
 		soulPrompt: options.soulPrompt,
-		userPrompt: "",
+		userPrompt: options.userPrompt ?? "",
 		stream: true
 	}
 

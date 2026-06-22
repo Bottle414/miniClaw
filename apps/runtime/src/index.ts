@@ -9,7 +9,7 @@ export type { RuntimeOptions, Runtime, ChatOptions } from "./types/runtime"
 export type { RuntimeEvent } from "./types/event"
 export type { Config } from "./types/config"
 export type { ContextBuilderOptions, Session, SummaryResult, SessionMetadata, Fact } from "./memory/types"
-export type { MetricsSnapshot, ToolMetrics } from "./types/llm/tool"
+export type { MetricsSnapshot, ToolMetrics, PermissionConfig } from "./types/llm/tool"
 export { loadPermissionConfig } from "./tools/middlewares/permission"
 
 /**
@@ -54,7 +54,8 @@ export function createRuntime(options: RuntimeOptions): Runtime {
 		apiKey: options.apiKey,
 		baseUrl: options.baseUrl,
 		model: options.model,
-		soulPrompt: options.soulPrompt
+		soulPrompt: options.soulPrompt,
+		userPrompt: options.userPrompt
 	})
 
 	// 创建并初始化 Provider
@@ -110,6 +111,14 @@ export function createRuntime(options: RuntimeOptions): Runtime {
 			messages.push({
 				role: "system",
 				content: config.soulPrompt
+			})
+		}
+
+		// 新 session：注入 userPrompt（用户自定义提示词）
+		if (session.messages.length === 0 && config.userPrompt) {
+			messages.push({
+				role: "system",
+				content: config.userPrompt
 			})
 		}
 

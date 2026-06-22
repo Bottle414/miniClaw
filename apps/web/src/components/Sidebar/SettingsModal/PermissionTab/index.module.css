@@ -1,0 +1,77 @@
+.container {
+  padding: 0 4px;
+}
+
+.sectionTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
+.divider {
+  margin: 12px 0 20px;
+}
+
+.toolSection {
+  margin-bottom: 24px;
+}
+
+.toolLabel {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 8px;
+  display: block;
+}
+
+.toolList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.toolTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.toolName {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.toolDesc {
+  color: var(--text-secondary);
+}
+
+.editorSection {
+  margin-bottom: 16px;
+}
+
+.editorLabel {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.editor {
+  font-family: var(--mono);
+  font-size: 13px;
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 6px;
+  line-height: 1.5;
+}
+
+.saveBtn {
+  margin-top: 8px;
+}
