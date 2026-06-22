@@ -57,3 +57,29 @@
   border-bottom-right-radius: 4px;
   font-weight: 500;
 }
+
+.reasoningCollapse {
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+
+.reasoningCollapse :global(.ant-collapse-header) {
+  font-size: 13px !important;
+  color: var(--text) !important;
+  padding: 6px 12px !important;
+}
+
+.reasoningCollapse :global(.ant-collapse-content-box) {
+  padding: 8px 12px !important;
+}
+
+.reasoningContent {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text);
+  opacity: 0.75;
+  font-family: inherit;
+}

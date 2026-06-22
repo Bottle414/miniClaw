@@ -37,6 +37,18 @@ export function createAssistantMessage(delta: string): ChatMessage {
 	}
 }
 
+/** 创建带思考内容的助手消息 */
+export function createAssistantMessageWithReasoning(reasoning: string): ChatMessage {
+	return {
+		id: createId(),
+		role: "assistant",
+		content: "",
+		segments: [],
+		reasoning,
+		isComplete: false
+	}
+}
+
 /**
  * 将 text-delta 追加到当前助手消息
  * 返回更新后的消息
@@ -52,6 +64,18 @@ export function appendDelta(message: ChatMessage, delta: string): ChatMessage {
 }
 
 /**
+ * 将 reasoning-delta 追加到当前助手消息的思考内容
+ * 返回更新后的消息
+ */
+export function appendReasoningDelta(message: ChatMessage, delta: string): ChatMessage {
+	return {
+		...message,
+		reasoning: (message.reasoning ?? "") + delta,
+		isComplete: false
+	}
+}
+
+/**
  * 标记消息为已完成
  */
 export function completeMessage(message: ChatMessage): ChatMessage {
@@ -61,6 +85,7 @@ export function completeMessage(message: ChatMessage): ChatMessage {
 /**
  * 处理一个 RuntimeEvent，更新消息列表
  *
+ * - reasoning-delta: 追加到当前未完成助手消息的思考内容，若无则新建
  * - text-delta: 追加到当前未完成助手消息，若无则新建
  * - finish: 标记当前 LLM 回合结束（不关闭消息，多轮思考可继续追加）
  * - loop-complete: 标记当前消息完成
@@ -68,21 +93,28 @@ export function completeMessage(message: ChatMessage): ChatMessage {
  *
  * 返回更新后的消息列表
  */
-export function processEvent(
-	messages: ChatMessage[],
-	event: { type: string; delta?: string }
-): ChatMessage[] {
+export function processEvent(messages: ChatMessage[], event: { type: string; delta?: string }): ChatMessage[] {
 	switch (event.type) {
+		case "reasoning-delta": {
+			const delta = (event as { type: "reasoning-delta"; delta: string }).delta
+			const lastMessage = messages[messages.length - 1]
+
+			// 如果最后一条是未完成的助手消息，追加思考内容
+			if (lastMessage?.role === "assistant" && !lastMessage.isComplete) {
+				return [...messages.slice(0, -1), appendReasoningDelta(lastMessage, delta)]
+			}
+
+			// 否则新建带思考内容的助手消息
+			return [...messages, createAssistantMessageWithReasoning(delta)]
+		}
+
 		case "text-delta": {
 			const delta = (event as { type: "text-delta"; delta: string }).delta
 			const lastMessage = messages[messages.length - 1]
 
 			// 如果最后一条是未完成的助手消息，追加
 			if (lastMessage?.role === "assistant" && !lastMessage.isComplete) {
-				return [
-					...messages.slice(0, -1),
-					appendDelta(lastMessage, delta)
-				]
+				return [...messages.slice(0, -1), appendDelta(lastMessage, delta)]
 			}
 
 			// 否则新建助手消息
@@ -92,10 +124,7 @@ export function processEvent(
 		case "loop-complete": {
 			const lastMessage = messages[messages.length - 1]
 			if (lastMessage?.role === "assistant" && !lastMessage.isComplete) {
-				return [
-					...messages.slice(0, -1),
-					completeMessage(lastMessage)
-				]
+				return [...messages.slice(0, -1), completeMessage(lastMessage)]
 			}
 			return messages
 		}

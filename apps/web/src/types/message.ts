@@ -46,4 +46,6 @@ export interface ChatMessage {
 	segments: Segment[]
 	/** 消息是否已完成（流式结束后标记为 true） */
 	isComplete: boolean
+	/** 思考过程（reasoning-delta 累积，仅 assistant 消息） */
+	reasoning?: string
 }
