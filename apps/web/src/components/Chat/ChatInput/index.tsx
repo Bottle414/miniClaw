@@ -6,11 +6,12 @@
 
 import { AudioOutlined, SendOutlined } from "@ant-design/icons"
 import { Button, Input, Select, message } from "antd"
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import styles from "./index.module.css"
 import { useSpeechRecognition } from "../../../hooks/speech"
 import { useSettingsStore } from "../../../stores/settings-store"
+import { useChatStore } from "../../../stores/chat-store"
 
 /** 可选模型列表 */
 const MODEL_OPTIONS = [
@@ -37,6 +38,12 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
 	const [voiceState, setVoiceState] = useState<VoiceState>("idle")
 	const baseValueRef = useRef("")
 	const { userConfig, switchModel } = useSettingsStore()
+	const activeSessionId = useChatStore((s) => s.activeSessionId)
+
+	// 切换 session 时清空输入框
+	useEffect(() => {
+		setValue("")
+	}, [activeSessionId])
 
 	const { start, abort } = useSpeechRecognition(
 		(text) => {

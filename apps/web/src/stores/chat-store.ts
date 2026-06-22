@@ -86,6 +86,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
 		const { isStreaming, messagesMap } = get()
 		if (isStreaming) return
 
+		// 切换 session 时清空 Runtime Inspector 数据
+		useRuntimeStore.getState().clearRuntime()
+		resetRuntimeEventProcessor()
+
 		if (messagesMap[id]) {
 			set({ activeSessionId: id, messages: messagesMap[id] })
 			return
