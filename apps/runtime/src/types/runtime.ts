@@ -19,8 +19,13 @@ interface SessionManager {
 	list(): Promise<SessionMetadata[]>
 }
 
+/** LLM 提供商类型 */
+export type LLMProviderType = "deepseek" | "glm"
+
 /** createRuntime 工厂选项。所有配置由调用方显式传入，不依赖 process.env。 */
 export interface RuntimeOptions {
+	/** LLM 提供商（可选，默认 deepseek）。 */
+	provider?: LLMProviderType
 	/** LLM API Key。 */
 	apiKey: string
 	/** LLM API Base URL（可选，使用默认值）。 */

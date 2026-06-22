@@ -23,6 +23,7 @@ dotenv.config({ path: path.resolve(projectRoot, envFile) })
 
 // 创建 runtime 实例
 const runtime = createRuntime({
+	provider: process.env.LLM_PROVIDER as "deepseek" | "glm" | undefined,
 	apiKey: process.env.API_KEY!,
 	baseUrl: process.env.DEEPSEEK_BASE_URL,
 	model: process.env.DEEPSEEK_MODEL,

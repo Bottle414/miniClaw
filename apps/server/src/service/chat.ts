@@ -3,7 +3,7 @@ import path from "node:path"
 
 import { createRuntime } from "@mini-claw/runtime"
 import { loadPermissionConfig } from "@mini-claw/runtime"
-import type { Runtime, MetricsSnapshot, ToolMetrics } from "@mini-claw/runtime"
+import type { Runtime, MetricsSnapshot, ToolMetrics, LLMProviderType } from "@mini-claw/runtime"
 
 import { serializeEvent } from "../utils/index.js"
 import { buildUserPrompt, buildSoulPrompt } from "./user-config.js"
@@ -61,7 +61,7 @@ function createMetricsWriter(sessionsRoot: string, sessionId: string): (snapshot
 
 /** 初始化 chatService，返回 chat 方法 */
 export function initChatService(
-	runtimeConfig: { apiKey: string; baseUrl?: string; model?: string; sessionsRoot: string; projectRoot?: string },
+	runtimeConfig: { apiKey: string; provider?: LLMProviderType; baseUrl?: string; model?: string; sessionsRoot: string; projectRoot?: string },
 	getUserConfig?: () => Promise<UserConfig>
 ) {
 	const permissionConfig = runtimeConfig.projectRoot ? loadPermissionConfig(runtimeConfig.projectRoot) : undefined

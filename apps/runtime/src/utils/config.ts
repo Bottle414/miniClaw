@@ -4,10 +4,18 @@
  */
 
 import type { Config } from "../types/config"
+import type { LLMProviderType } from "../types/runtime"
 import { getSystemPrompt } from "../prompts/system"
+
+/** 各提供商的默认配置 */
+const PROVIDER_DEFAULTS: Record<LLMProviderType, { baseURL: string; model: string }> = {
+	deepseek: { baseURL: "https://api.deepseek.com", model: "deepseek-chat" },
+	glm: { baseURL: "https://open.bigmodel.cn/api/paas/v4", model: "glm-4-flash" }
+}
 
 /** createConfig 选项，所有字段由调用方显式传入。 */
 export interface CreateConfigOptions {
+	provider?: LLMProviderType
 	apiKey: string
 	baseUrl?: string
 	model?: string
@@ -30,6 +38,9 @@ export function createConfig(options: CreateConfigOptions): Config {
 		validateBaseUrl(options.baseUrl)
 	}
 
+	const providerType = options.provider ?? "deepseek"
+	const defaults = PROVIDER_DEFAULTS[providerType]
+
 	// 合并 RuntimeConfig 和 TaskConfig
 	const config: Config = {
 		// RuntimeConfig
@@ -39,9 +50,9 @@ export function createConfig(options: CreateConfigOptions): Config {
 		maxSendRetryTimes: 3,
 
 		// TaskConfig
-		baseURL: options.baseUrl || "https://api.deepseek.com",
+		baseURL: options.baseUrl || defaults.baseURL,
 		apiKey: options.apiKey,
-		model: options.model || "deepseek-chat",
+		model: options.model || defaults.model,
 		soulPrompt: options.soulPrompt,
 		userPrompt: options.userPrompt ?? "",
 		stream: true

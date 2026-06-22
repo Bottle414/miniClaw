@@ -38,6 +38,7 @@ if (!apiKey) {
 
 const runtimeConfig = {
 	apiKey,
+	provider: process.env.LLM_PROVIDER as "deepseek" | "glm" | undefined,
 	baseUrl: process.env.DEEPSEEK_BASE_URL,
 	model: process.env.DEEPSEEK_MODEL,
 	sessionsRoot: path.resolve(projectRoot, ".sessions"),

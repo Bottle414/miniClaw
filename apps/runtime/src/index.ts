@@ -3,7 +3,7 @@
  *
  * 导出 createRuntime 工厂方法及相关类型，
  */
-export type { RuntimeOptions, Runtime, ChatOptions } from "./types/runtime"
+export type { RuntimeOptions, Runtime, ChatOptions, LLMProviderType } from "./types/runtime"
 
 // 重导出常用类型，方便外部使用
 export type { RuntimeEvent } from "./types/event"
@@ -23,7 +23,7 @@ export { loadPermissionConfig } from "./tools/middlewares/permission"
  */
 
 import { createConfig } from "./utils/config"
-import { DeepSeekProvider } from "./provider"
+import { DeepSeekProvider, GLMProvider } from "./provider"
 import { createToolHandler } from "./tools"
 import { weatherGetWeather } from "./tools/weather"
 import { timeGetCurrent } from "./tools/time"
@@ -51,6 +51,7 @@ export function createRuntime(options: RuntimeOptions): Runtime {
 
 	// 创建配置
 	const config = createConfig({
+		provider: options.provider,
 		apiKey: options.apiKey,
 		baseUrl: options.baseUrl,
 		model: options.model,
@@ -58,8 +59,9 @@ export function createRuntime(options: RuntimeOptions): Runtime {
 		userPrompt: options.userPrompt
 	})
 
-	// 创建并初始化 Provider
-	const provider = DeepSeekProvider()
+	// 根据提供商类型创建 Provider
+	const providerType = options.provider ?? "deepseek"
+	const provider = providerType === "glm" ? GLMProvider() : DeepSeekProvider()
 	provider.init(config)
 
 	// 创建 memory 和 summarizer
