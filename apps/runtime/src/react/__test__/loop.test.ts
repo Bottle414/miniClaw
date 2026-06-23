@@ -76,10 +76,15 @@ test("executeReActLoop sends contextMessages while preserving full ReAct state m
 
 	assert.equal(loopCompleteEvent?.error, undefined)
 	assert.equal(requests.length, 1)
-	assert.equal(requests[0]?.messages.length, 2)
-	assert.match(requests[0]?.messages[0]?.content ?? "", /old context summary/)
-	assert.equal((requests[0]?.messages[0]?.content ?? "").includes("摘要生成器"), false)
-	assert.deepEqual(requests[0]?.messages[1], {
+	assert.equal(requests[0]?.messages.length, 3)
+	// userPrompt 注入的系统消息
+	assert.equal(requests[0]?.messages[0]?.role, "system")
+	assert.equal(requests[0]?.messages[0]?.content, "user")
+	// 摘要消息
+	assert.match(requests[0]?.messages[1]?.content ?? "", /old context summary/)
+	assert.equal((requests[0]?.messages[1]?.content ?? "").includes("摘要生成器"), false)
+	// 用户消息
+	assert.deepEqual(requests[0]?.messages[2], {
 		role: "user",
 		content: "new task"
 	})
@@ -88,6 +93,7 @@ test("executeReActLoop sends contextMessages while preserving full ReAct state m
 	assert.deepEqual(loopCompleteEvent?.state.messages.at(-1), {
 		role: "assistant",
 		content: "done",
-		toolCalls: undefined
+		toolCalls: undefined,
+		reasoning: undefined
 	})
 })

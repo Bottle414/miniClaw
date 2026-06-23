@@ -15,7 +15,8 @@ function createMockRuntime(events: any[] = []) {
 }
 
 vi.mock("@mini-claw/runtime", () => ({
-	createRuntime: vi.fn()
+	createRuntime: vi.fn(),
+	loadPermissionConfig: vi.fn(() => undefined)
 }))
 
 describe("chatService", () => {
@@ -26,8 +27,20 @@ describe("chatService", () => {
 		sessionsRoot: "/fake/sessions"
 	}
 
+	const getUserConfig = vi.fn<() => Promise<any>>()
+
 	beforeEach(() => {
 		vi.clearAllMocks()
+		// 默认返回有 apiKey 的配置，避免触发 "API Key 未配置" 错误
+		getUserConfig.mockResolvedValue({
+			name: "",
+			identity: "",
+			detail: "",
+			soul: "",
+			model: "test-model",
+			deepseekApiKey: "test-key",
+			glmApiKey: ""
+		})
 	})
 
 	describe("chat", () => {
@@ -39,7 +52,7 @@ describe("chatService", () => {
 			])
 			;(createRuntime as any).mockReturnValue(mockRuntime)
 
-			const service = initChatService(runtimeConfig)
+			const service = initChatService(runtimeConfig, getUserConfig)
 			const events = []
 			for await (const event of service.chat({ message: "Hi" })) {
 				events.push(event)
@@ -60,13 +73,36 @@ describe("chatService", () => {
 			])
 			;(createRuntime as any).mockReturnValue(mockRuntime)
 
-			const service = initChatService(runtimeConfig)
+			const service = initChatService(runtimeConfig, getUserConfig)
 			const events = []
 			for await (const event of service.chat({ message: "Hi" })) {
 				events.push(event)
 			}
 
 			expect(events).toHaveLength(2)
+		})
+
+		it("should yield error SSE event when API Key is not configured", async () => {
+			getUserConfig.mockResolvedValue({
+				name: "",
+				identity: "",
+				detail: "",
+				soul: "",
+				model: "test-model",
+				deepseekApiKey: "",
+				glmApiKey: ""
+			})
+
+			const service = initChatService(runtimeConfig, getUserConfig)
+			const events = []
+			for await (const event of service.chat({ message: "Hi" })) {
+				events.push(event)
+			}
+
+			expect(events).toHaveLength(1)
+			const parsed = JSON.parse(events[0].data)
+			expect(parsed.type).toBe("error")
+			expect(parsed.error.message).toBe("API Key 未配置，请在设置中配置 API Key")
 		})
 
 		it("should yield error SSE event when runtime throws", async () => {
@@ -80,7 +116,7 @@ describe("chatService", () => {
 			}
 			;(createRuntime as any).mockReturnValue(mockRuntime)
 
-			const service = initChatService(runtimeConfig)
+			const service = initChatService(runtimeConfig, getUserConfig)
 			const events = []
 			for await (const event of service.chat({ message: "Hi" })) {
 				events.push(event)
@@ -97,7 +133,7 @@ describe("chatService", () => {
 			const mockRuntime = createMockRuntime([{ type: "loop-complete", state: {} }])
 			;(createRuntime as any).mockReturnValue(mockRuntime)
 
-			const service = initChatService(runtimeConfig)
+			const service = initChatService(runtimeConfig, getUserConfig)
 
 			for await (const _ of service.chat({ message: "Hi", sessionId: "s1" })) {
 				/* consume */

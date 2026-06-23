@@ -27,7 +27,7 @@ describe("userConfigController", () => {
 
 	describe("GET /api/user-config", () => {
 		it("should return user config", async () => {
-			const config = { name: "小明", identity: "工程师", detail: "喜欢编程", soul: "友好" }
+			const config = { name: "小明", identity: "工程师", detail: "喜欢编程", soul: "友好", model: "deepseek-v4-flash", deepseekApiKey: "", glmApiKey: "" }
 			;(userService.get as any).mockResolvedValue(config)
 
 			const res = await request(app).get(USER_CONFIG)
@@ -48,12 +48,10 @@ describe("userConfigController", () => {
 
 	describe("PUT /api/user-config", () => {
 		it("should update config and return result", async () => {
-			const updated = { name: "小红", identity: "设计师", detail: "喜欢画画", soul: "" }
+			const updated = { name: "小红", identity: "设计师", detail: "喜欢画画", soul: "", model: "deepseek-v4-flash", deepseekApiKey: "", glmApiKey: "" }
 			;(userService.update as any).mockResolvedValue(updated)
 
-			const res = await request(app)
-				.put(USER_CONFIG)
-				.send({ name: "小红", identity: "设计师" })
+			const res = await request(app).put(USER_CONFIG).send({ name: "小红", identity: "设计师" })
 
 			expect(res.status).toBe(200)
 			expect(res.body).toEqual(updated)
@@ -62,9 +60,7 @@ describe("userConfigController", () => {
 		it("should return 500 when service throws", async () => {
 			;(userService.update as any).mockRejectedValue(new Error("Write error"))
 
-			const res = await request(app)
-				.put(USER_CONFIG)
-				.send({ name: "小红" })
+			const res = await request(app).put(USER_CONFIG).send({ name: "小红" })
 
 			expect(res.status).toBe(500)
 			expect(res.body.error).toBe("Write error")
