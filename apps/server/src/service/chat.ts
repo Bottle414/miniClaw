@@ -3,7 +3,7 @@ import path from "node:path"
 
 import { createRuntime } from "@mini-claw/runtime"
 import { loadPermissionConfig } from "@mini-claw/runtime"
-import type { Runtime, MetricsSnapshot, ToolMetrics, LLMProviderType } from "@mini-claw/runtime"
+import type { Runtime, MetricsSnapshot, ToolMetrics, LLMProviderType, PermissionConfig } from "@mini-claw/runtime"
 
 import { serializeEvent } from "../utils/index.js"
 import { buildUserPrompt, buildSoulPrompt } from "./user-config.js"
@@ -78,15 +78,16 @@ export function initChatService(
 	runtimeConfig: { apiKey: string; provider?: LLMProviderType; baseUrl?: string; model?: string; sessionsRoot: string; projectRoot?: string },
 	getUserConfig?: () => Promise<UserConfig>
 ) {
-	const permissionConfig = runtimeConfig.projectRoot ? loadPermissionConfig(runtimeConfig.projectRoot) : undefined
 	// 缓存 key = sessionId:model，模型切换后创建新 runtime
-	const runtimeCache = new Map<string, Runtime>()
+	const runtimeCache = new Map<string, { runtime: Runtime; permissionHash: string }>()
 
-	function getRuntimeForSession(sessionId: string, userConfig?: UserConfig): Runtime {
+	function getRuntimeForSession(sessionId: string, userConfig?: UserConfig, permissionConfig?: PermissionConfig): Runtime {
 		const model = userConfig?.model || runtimeConfig.model || "deepseek-v4-flash"
 		const cacheKey = `${sessionId}:${model}`
+		const permissionHash = JSON.stringify(permissionConfig)
+
 		const cached = runtimeCache.get(cacheKey)
-		if (cached) return cached
+		if (cached && cached.permissionHash === permissionHash) return cached.runtime
 
 		const provider = inferProvider(model)
 		const apiKey = resolveApiKey(provider, userConfig)
@@ -94,7 +95,7 @@ export function initChatService(
 		const userPrompt = userConfig ? buildUserPrompt(userConfig) : undefined
 		const soulPrompt = userConfig ? buildSoulPrompt(userConfig) : undefined
 		const runtime = createRuntime({ ...runtimeConfig, apiKey, provider, model, sessionId, permissionConfig, onMetricsUpdate, userPrompt, soulPrompt })
-		runtimeCache.set(cacheKey, runtime)
+		runtimeCache.set(cacheKey, { runtime, permissionHash })
 		return runtime
 	}
 
@@ -112,6 +113,9 @@ export function initChatService(
 				}
 			}
 
+			// 每次请求重新加载权限配置，确保 permission.json 修改后立即生效
+			const permissionConfig = runtimeConfig.projectRoot ? loadPermissionConfig(runtimeConfig.projectRoot) : undefined
+
 			const model = userConfig?.model || runtimeConfig.model || "deepseek-v4-flash"
 			const provider = inferProvider(model)
 			const apiKey = resolveApiKey(provider, userConfig)
@@ -123,7 +127,7 @@ export function initChatService(
 			}
 
 			const runtime = sessionId
-				? getRuntimeForSession(sessionId, userConfig)
+				? getRuntimeForSession(sessionId, userConfig, permissionConfig)
 				: createRuntime({
 						...runtimeConfig,
 						apiKey,
