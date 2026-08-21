@@ -54,6 +54,8 @@ export interface RuntimeOptions {
 export interface ChatOptions {
 	/** 上下文构建选项，控制消息保留/摘要策略。 */
 	contextOptions?: ContextBuilderOptions
+	/** 外部中断信号（可选），abort 后循环尽早退出，已发出的 LLM 流式请求和工具调用也会被中断。 */
+	signal?: AbortSignal
 }
 
 /** createRuntime 返回的 Runtime 实例。 */

@@ -1,6 +1,15 @@
 import path from "node:path"
 import type { LLMTool } from "../types/llm"
-import type { ToolExecutor, ToolMetadata, ToolResult, ToolMiddleware, MiddlewareContext, MiddlewareRuntimeState, PermissionConfig, MetricsSnapshot } from "../types/llm/tool"
+import type {
+	ToolExecutor,
+	ToolMetadata,
+	ToolResult,
+	ToolMiddleware,
+	MiddlewareContext,
+	MiddlewareRuntimeState,
+	PermissionConfig,
+	MetricsSnapshot
+} from "../types/llm/tool"
 import { composeMiddlewareChain } from "./middlewares/compose"
 import { createPermissionMiddleware } from "./middlewares/permission"
 import { createCancellationMiddleware } from "./middlewares/cancellation"
@@ -52,12 +61,7 @@ export type ToolHandler = ReturnType<typeof createToolHandler>
 export function createToolHandler(options?: ToolHandlerOptions) {
 	const tools = new Map<string, ToolEntry>()
 
-	const {
-		permissionConfig,
-		onPermissionCheck = async () => true,
-		onMetricsUpdate,
-		sessionsRoot
-	} = options ?? {}
+	const { permissionConfig, onPermissionCheck = async () => true, onMetricsUpdate, sessionsRoot } = options ?? {}
 
 	// 默认中间件链：permission → cancellation → metrics → cache → logging → retry → timeout
 	// metrics 在 cache 之前，确保缓存命中时 metrics 仍可记录
@@ -100,7 +104,7 @@ export function createToolHandler(options?: ToolHandlerOptions) {
 	}
 
 	/** 调用工具 */
-	async function call(name: string, params: Record<string, unknown>, sessionId?: string): Promise<ToolResult> {
+	async function call(name: string, params: Record<string, unknown>, sessionId?: string, signal?: AbortSignal): Promise<ToolResult> {
 		const entry = tools.get(name)
 		if (!entry) {
 			return {
@@ -118,6 +122,7 @@ export function createToolHandler(options?: ToolHandlerOptions) {
 			params,
 			metadata: entry.metadata ?? defaultMetadata,
 			sessionId: sessionId ?? "",
+			abortSignal: signal,
 			runtime
 		}
 

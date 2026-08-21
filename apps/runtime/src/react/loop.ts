@@ -39,6 +39,8 @@ export interface ReActLoopConfig {
 	sessionId?: string
 	/** 工具处理器实例 */
 	toolHandler: ToolHandler
+	/** 外部中断信号（可选），abort 后循环尽早退出，不发起后续 LLM 请求和工具调用 */
+	signal?: AbortSignal
 }
 
 /**
@@ -103,7 +105,8 @@ export async function* executeReActLoop(loopConfig: ReActLoopConfig): AsyncItera
 		contextOptions,
 		summarizer,
 		sessionId,
-		toolHandler
+		toolHandler,
+		signal
 	} = loopConfig
 
 	// 初始化状态
@@ -122,9 +125,18 @@ export async function* executeReActLoop(loopConfig: ReActLoopConfig): AsyncItera
 	}
 	state = addMessage(state, userMessage)
 
+	/** 检查中断信号，已 abort 则返回 true */
+	const isAborted = () => signal?.aborted === true
+
 	try {
 		// 主循环
 		while (!state.shouldTerminate) {
+			// 循环顶部检查中断：进入新迭代前若已 abort 则直接结束
+			if (isAborted()) {
+				state = markTermination(state, "aborted")
+				break
+			}
+
 			// yield 迭代开始事件
 			yield { type: "iteration-start", iteration: state.iteration }
 
@@ -135,8 +147,14 @@ export async function* executeReActLoop(loopConfig: ReActLoopConfig): AsyncItera
 				yield event
 			}
 
+			// Act 阶段前检查中断：避免已 abort 还发起 LLM 流式请求
+			if (isAborted()) {
+				state = markTermination(state, "aborted")
+				break
+			}
+
 			// Act 阶段（实时 yield ProviderEvent）
-			const actResult = yield* executeActPhase(state, provider, config, memory, contextOptions, summarizer, toolHandler)
+			const actResult = yield* executeActPhase(state, provider, config, memory, contextOptions, summarizer, toolHandler, signal)
 			state = actResult.state
 			if (actResult.summaryResult) {
 				latestSummaryResult = actResult.summaryResult
@@ -149,6 +167,12 @@ export async function* executeReActLoop(loopConfig: ReActLoopConfig): AsyncItera
 				}
 			}
 
+			// Act 阶段结束后检查中断：LLM 流可能被 signal 中断，此时 actResult 可能不完整
+			if (isAborted()) {
+				state = markTermination(state, "aborted")
+				break
+			}
+
 			// 检查是否应该终止（最终答案或空响应）
 			const terminationCheck = shouldTerminate(state, { maxIterations: config.maxIterations ?? 10 }, actResult.assistantMessage)
 
@@ -159,7 +183,12 @@ export async function* executeReActLoop(loopConfig: ReActLoopConfig): AsyncItera
 
 			// Observe 阶段（如果有工具调用）
 			if (actResult.hasToolCalls) {
-				const observeResult = await executeObservePhase(state, actResult.toolCalls!, sessionId, toolHandler)
+				// Observe 前检查中断：避免已 abort 还执行工具
+				if (isAborted()) {
+					state = markTermination(state, "aborted")
+					break
+				}
+				const observeResult = await executeObservePhase(state, actResult.toolCalls!, sessionId, toolHandler, signal)
 				state = observeResult.state
 				for (const event of observeResult.events) {
 					yield event
@@ -248,7 +277,8 @@ async function* executeActPhase(
 	memory: RuntimeMemoryState,
 	contextOptions?: ContextBuilderOptions,
 	summarizer?: Summarizer,
-	toolHandler?: ToolHandler
+	toolHandler?: ToolHandler,
+	signal?: AbortSignal
 ): AsyncGenerator<RuntimeEvent, ActPhaseResult> {
 	// 获取工具定义
 	const tools = toolHandler?.getToolDefinitions()
@@ -278,7 +308,7 @@ async function* executeActPhase(
 		messages: injectedMessages,
 		model: config.model,
 		tools
-	})) {
+	}, signal)) {
 		// 实时 yield ProviderEvent
 		yield event
 		// 累积到合并器
@@ -321,7 +351,8 @@ async function executeObservePhase(
 	state: ReActState,
 	toolCalls: NonNullable<LLMAssistantMessage["toolCalls"]>,
 	sessionId?: string,
-	toolHandler?: ToolHandler
+	toolHandler?: ToolHandler,
+	signal?: AbortSignal
 ): Promise<ObservePhaseResult> {
 	const events: RuntimeEvent[] = []
 
@@ -353,7 +384,7 @@ async function executeObservePhase(
 
 		try {
 			const params = JSON.parse(argsStr || "{}")
-			const toolResult = await toolHandler!.call(name, params, sessionId)
+			const toolResult = await toolHandler!.call(name, params, sessionId, signal)
 			if (toolResult.error) {
 				success = false
 				error = `${toolResult.error.code}: ${toolResult.error.message}`

@@ -77,9 +77,10 @@ export function DeepSeekProvider(): Provider {
 		/**
 		 * 流式发送聊天请求
 		 * @param req 统一 LLM 请求
+		 * @param signal 可选中断信号，abort 后立即终止底层流式请求
 		 * @returns ProviderEvent 异步迭代器
 		 */
-		async *chatStream(req: LLMRequest): AsyncIterable<ProviderEvent> {
+		async *chatStream(req: LLMRequest, signal?: AbortSignal): AsyncIterable<ProviderEvent> {
 			if (!client) {
 				yield { type: "error", error: new Error("Provider not initialized") }
 				return
@@ -90,18 +91,23 @@ export function DeepSeekProvider(): Provider {
 				return
 			}
 
+			// 已中断则直接返回，避免无谓发起请求
+			if (signal?.aborted) {
+				return
+			}
+
 			try {
 				// 转换请求
 				const deepseekRequest = deepseekAdapter.transformRequest(req)
 
-				// 调用流式 API
+				// 调用流式 API，透传 signal 让 OpenAI SDK 中断底层请求
 				const stream = await client.chat.completions.create({
 					messages: deepseekRequest.messages as any,
 					model: deepseekRequest.model,
 					tools: deepseekRequest.tools as any,
 					tool_choice: deepseekRequest.tool_choice as any,
 					stream: true
-				})
+				}, { signal })
 
 				// 逐 chunk 转换并 yield
 				// 维护 index → toolCallId 映射，用于关联后续参数增量 chunk

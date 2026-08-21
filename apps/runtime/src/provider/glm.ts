@@ -62,7 +62,7 @@ export function GLMProvider(): Provider {
 			}
 		},
 
-		async *chatStream(req: LLMRequest): AsyncIterable<ProviderEvent> {
+		async *chatStream(req: LLMRequest, signal?: AbortSignal): AsyncIterable<ProviderEvent> {
 			if (!client) {
 				yield { type: "error", error: new Error("Provider not initialized") }
 				return
@@ -72,16 +72,22 @@ export function GLMProvider(): Provider {
 				return
 			}
 
+			// 已中断则直接返回，避免无谓发起请求
+			if (signal?.aborted) {
+				return
+			}
+
 			try {
 				const glmRequest = deepseekAdapter.transformRequest(req)
 
+				// 透传 signal 让 OpenAI SDK 中断底层请求
 				const stream = await client.chat.completions.create({
 					messages: glmRequest.messages as any,
 					model: glmRequest.model,
 					tools: glmRequest.tools as any,
 					tool_choice: glmRequest.tool_choice as any,
 					stream: true
-				})
+				}, { signal })
 
 				const toolCallIndexMap = new Map<number, string>()
 				for await (const chunk of stream) {

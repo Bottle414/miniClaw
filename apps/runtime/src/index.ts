@@ -167,7 +167,8 @@ export function createRuntime(options: RuntimeOptions): Runtime {
 				contextOptions: options?.contextOptions,
 				summarizer,
 				sessionId: session.id,
-				toolHandler: handlerTool
+				toolHandler: handlerTool,
+				signal: options?.signal
 			})) {
 				// 在 yield 之前收集 loop-complete 数据，因为 yield 后消费者可能 break 导致后续代码不执行
 				if (event.type === "loop-complete") {

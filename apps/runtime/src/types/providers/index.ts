@@ -70,6 +70,6 @@ export interface Provider {
 	init(config: Config): void
 	/** 发送消息 */
 	chat(req: LLMRequest): Promise<LLMResponse>
-	/** 流式发送消息 */
-	chatStream(req: LLMRequest): AsyncIterable<ProviderEvent>
+	/** 流式发送消息，可选传入 AbortSignal 以支持外部中断 */
+	chatStream(req: LLMRequest, signal?: AbortSignal): AsyncIterable<ProviderEvent>
 }

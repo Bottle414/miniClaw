@@ -11,12 +11,14 @@
  * - iteration_limit: 达到最大迭代次数限制
  * - error: 发生错误（API 错误、工具执行错误等）
  * - empty_response: LLM 返回空响应
+ * - aborted: 外部通过 AbortSignal 主动中断
  */
 export type TerminationReason =
 	| "final_answer"
 	| "iteration_limit"
 	| "error"
 	| "empty_response"
+	| "aborted"
 
 /**
  * 有效的终止原因数组（用于验证）
@@ -25,7 +27,8 @@ export const VALID_TERMINATION_REASONS: readonly TerminationReason[] = [
 	"final_answer",
 	"iteration_limit",
 	"error",
-	"empty_response"
+	"empty_response",
+	"aborted"
 ] as const
 
 /**
