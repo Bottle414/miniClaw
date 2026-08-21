@@ -44,6 +44,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
 				)}
 				{message.content}
 				{!message.isComplete && <StreamingIndicator />}
+				{message.isAborted && <span className={styles.abortedTag}>已停止</span>}
 			</div>
 		</div>
 	)

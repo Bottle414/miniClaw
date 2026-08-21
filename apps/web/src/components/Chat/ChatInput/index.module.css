@@ -55,3 +55,12 @@
 .sendBtn:not(:disabled):active {
   transform: scale(0.96);
 }
+
+.stopBtn {
+  background: #ff4d4f;
+  color: #fff;
+}
+
+.stopBtn:hover {
+  background: #ff7875;
+}

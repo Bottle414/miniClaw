@@ -183,11 +183,6 @@ export async function* executeReActLoop(loopConfig: ReActLoopConfig): AsyncItera
 
 			// Observe 阶段（如果有工具调用）
 			if (actResult.hasToolCalls) {
-				// Observe 前检查中断：避免已 abort 还执行工具
-				if (isAborted()) {
-					state = markTermination(state, "aborted")
-					break
-				}
 				const observeResult = await executeObservePhase(state, actResult.toolCalls!, sessionId, toolHandler, signal)
 				state = observeResult.state
 				for (const event of observeResult.events) {
@@ -304,11 +299,14 @@ async function* executeActPhase(
 	}
 	injectedMessages.push(...contextMessages)
 
-	for await (const event of provider.chatStream({
-		messages: injectedMessages,
-		model: config.model,
-		tools
-	}, signal)) {
+	for await (const event of provider.chatStream(
+		{
+			messages: injectedMessages,
+			model: config.model,
+			tools
+		},
+		signal
+	)) {
 		// 实时 yield ProviderEvent
 		yield event
 		// 累积到合并器

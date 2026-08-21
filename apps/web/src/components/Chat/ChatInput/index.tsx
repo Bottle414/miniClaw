@@ -4,7 +4,7 @@
  * 底部固定输入框 + 发送按钮 + 模型切换，使用 antd Input
  */
 
-import { AudioOutlined, SendOutlined } from "@ant-design/icons"
+import { AudioOutlined, SendOutlined, StopOutlined } from "@ant-design/icons"
 import { Button, Input, Select, message } from "antd"
 import { useEffect, useRef, useState } from "react"
 
@@ -22,6 +22,8 @@ const MODEL_OPTIONS = [
 interface ChatInputProps {
 	/** 发送消息回调 */
 	onSend: (content: string) => void
+	/** 停止流式生成回调 */
+	onStop: () => void
 	/** 是否禁用（流式输出中） */
 	disabled: boolean
 }
@@ -33,7 +35,7 @@ const voiceLabel: Record<VoiceState, string> = {
 	recording: "录制中"
 }
 
-export function ChatInput({ onSend, disabled }: ChatInputProps) {
+export function ChatInput({ onSend, onStop, disabled }: ChatInputProps) {
 	const [value, setValue] = useState("")
 	const [voiceState, setVoiceState] = useState<VoiceState>("idle")
 	const baseValueRef = useRef("")
@@ -93,10 +95,16 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
 					size="large"
 					style={{ borderRadius: 24, flex: 1, height: 50 }}
 				/>
-				<button className={styles.sendBtn} onClick={handleSubmit} disabled={disabled || !value.trim()} aria-label="Send message">
-					<SendOutlined />
-				</button>
-				<Button size="large" icon={<AudioOutlined />} onClick={handleRecord} loading={voiceState !== "idle"} disabled={false}>
+				{disabled ? (
+					<button className={`${styles.sendBtn} ${styles.stopBtn}`} onClick={onStop} aria-label="Stop generation">
+						<StopOutlined />
+					</button>
+				) : (
+					<button className={styles.sendBtn} onClick={handleSubmit} disabled={!value.trim()} aria-label="Send message">
+						<SendOutlined />
+					</button>
+				)}
+				<Button size="large" icon={<AudioOutlined />} onClick={handleRecord} loading={voiceState !== "idle"} disabled={disabled}>
 					{voiceLabel[voiceState]}
 				</Button>
 			</div>

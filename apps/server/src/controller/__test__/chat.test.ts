@@ -58,7 +58,11 @@ describe("chatController", () => {
 
 			await request(app).post(CHAT).send({ message: "Hello", sessionId: "s1" })
 
-			expect(chatService.chat).toHaveBeenCalledWith({ message: "Hello", sessionId: "s1" })
+			expect(chatService.chat).toHaveBeenCalledWith({
+				message: "Hello",
+				sessionId: "s1",
+				signal: expect.any(AbortSignal)
+			})
 		})
 
 		it("should work without sessionId", async () => {
@@ -69,7 +73,11 @@ describe("chatController", () => {
 			const res = await request(app).post(CHAT).send({ message: "Hello" })
 
 			expect(res.status).toBe(200)
-			expect(chatService.chat).toHaveBeenCalledWith({ message: "Hello", sessionId: undefined })
+			expect(chatService.chat).toHaveBeenCalledWith({
+				message: "Hello",
+				sessionId: undefined,
+				signal: expect.any(AbortSignal)
+			})
 		})
 	})
 })

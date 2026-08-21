@@ -23,15 +23,21 @@ export type SSERuntimeEvent =
  *
  * @param message 用户消息内容
  * @param sessionId 当前会话 ID，服务端用于持久化到对应 session
+ * @param signal 外部中断信号，abort 时 fetch 立即 reject（AbortError）
  */
-export async function* streamChat(message: string, sessionId?: string): AsyncGenerator<SSERuntimeEvent> {
+export async function* streamChat(
+	message: string,
+	sessionId?: string,
+	signal?: AbortSignal
+): AsyncGenerator<SSERuntimeEvent> {
 	const body: Record<string, string> = { message }
 	if (sessionId) body.sessionId = sessionId
 
 	const response = await fetch("/api/chat", {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify(body)
+		body: JSON.stringify(body),
+		signal
 	})
 
 	if (!response.ok) {

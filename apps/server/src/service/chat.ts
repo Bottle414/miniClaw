@@ -27,6 +27,8 @@ function resolveApiKey(provider: LLMProviderType, userConfig?: UserConfig): stri
 export interface ChatParams {
 	message: string
 	sessionId?: string
+	/** 外部中断信号，由 controller 透传，用于中断 runtime 调用链 */
+	signal?: AbortSignal
 }
 
 /** SSE 事件数据 */
@@ -101,7 +103,7 @@ export function initChatService(
 
 	return {
 		async *chat(params: ChatParams): AsyncIterable<SSEEvent> {
-			const { message, sessionId } = params
+			const { message, sessionId, signal } = params
 
 			// 读取用户配置，注入 userPrompt 和 soulPrompt
 			let userConfig: UserConfig | undefined
@@ -122,7 +124,10 @@ export function initChatService(
 
 			// API Key 未配置时直接返回错误
 			if (!apiKey) {
-				yield { event: "runtime-event", data: JSON.stringify({ type: "error", error: { message: "API Key 未配置，请在设置中配置 API Key", stack: "" } }) }
+				yield {
+					event: "runtime-event",
+					data: JSON.stringify({ type: "error", error: { message: "API Key 未配置，请在设置中配置 API Key", stack: "" } })
+				}
 				return
 			}
 
@@ -140,7 +145,8 @@ export function initChatService(
 
 			try {
 				for await (const event of runtime.chat(message, {
-					contextOptions: { preserveRecentMessages: 2 }
+					contextOptions: { preserveRecentMessages: 2 },
+					signal
 				})) {
 					const data = serializeEvent(event)
 					yield { event: "runtime-event", data }

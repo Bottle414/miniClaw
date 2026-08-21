@@ -48,4 +48,6 @@ export interface ChatMessage {
 	isComplete: boolean
 	/** 思考过程（reasoning-delta 累积，仅 assistant 消息） */
 	reasoning?: string
+	/** 是否被用户主动中断（停止按钮触发） */
+	isAborted?: boolean
 }

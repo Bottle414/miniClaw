@@ -19,6 +19,14 @@ function createSessionId(): string {
 	return uuidv4()
 }
 
+/** 当前流式生成对应的 AbortController，模块级保存，避免暴露到 store state */
+let currentController: AbortController | null = null
+
+/** 判断错误是否为 abort（用户主动中断） */
+function isAbortError(err: unknown): boolean {
+	return err instanceof Error && (err.name === "AbortError" || err.name === "TimeoutError")
+}
+
 /** 从服务端 name 生成前端展示标题：默认 session-xxx 格式则返回空，由调用方兜底 */
 function deriveTitle(name: string, messages: ChatMessage[]): string {
 	if (name && !name.startsWith("session-")) return name
@@ -53,6 +61,8 @@ interface ChatState {
 	deleteSession: (id: string) => Promise<boolean>
 	/** 发送消息 */
 	sendMessage: (content: string) => Promise<void>
+	/** 停止当前流式生成（中断 LLM 调用和工具执行） */
+	stopGeneration: () => void
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -136,6 +146,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
 		set({ activeSessionId: null, messages: [] })
 	},
 
+	stopGeneration: () => {
+		if (!currentController) return
+		currentController.abort()
+		currentController = null
+	},
+
 	deleteSession: async (id) => {
 		const { sessions, activeSessionId, messagesMap } = get()
 
@@ -193,10 +209,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
 			}
 		})
 
+		// 为本次请求创建 AbortController，供 stopGeneration 调用
+		const controller = new AbortController()
+		currentController = controller
+
 		try {
 			let currentMessages = [...(messagesMap[sessionId] ?? []), userMsg]
 
-			for await (const event of streamChat(content, sessionId)) {
+			for await (const event of streamChat(content, sessionId, controller.signal)) {
 				currentMessages = processEvent(currentMessages, event)
 				processRuntimeEvent(event)
 
@@ -215,21 +235,38 @@ export const useChatStore = create<ChatState>((set, get) => ({
 				}))
 			}
 		} catch (err) {
-			const errorMsg: ChatMessage = {
-				id: `error-${Date.now()}`,
-				role: "assistant",
-				content: `Connection error: ${err instanceof Error ? err.message : String(err)}`,
-				segments: [{ type: "text", content: `Connection error: ${err instanceof Error ? err.message : String(err)}` }],
-				isComplete: true
-			}
-			set((s) => {
-				const updated = [...(s.messagesMap[sessionId] ?? []), errorMsg]
-				return {
-					messagesMap: { ...s.messagesMap, [sessionId]: updated },
-					messages: s.activeSessionId === sessionId ? updated : s.messages
+			if (isAbortError(err)) {
+				// 用户主动中断：把最后一条未完成的 assistant 消息标记为已停止，保留已生成的内容
+				set((s) => {
+					const msgs = [...(s.messagesMap[sessionId] ?? [])]
+					const last = msgs[msgs.length - 1]
+					if (last && last.role === "assistant" && !last.isComplete) {
+						msgs[msgs.length - 1] = { ...last, isComplete: true, isAborted: true }
+					}
+					return {
+						messagesMap: { ...s.messagesMap, [sessionId]: msgs },
+						messages: s.activeSessionId === sessionId ? msgs : s.messages
+					}
+				})
+			} else {
+				// 真实错误：显示错误消息
+				const errorMsg: ChatMessage = {
+					id: `error-${Date.now()}`,
+					role: "assistant",
+					content: `Connection error: ${err instanceof Error ? err.message : String(err)}`,
+					segments: [{ type: "text", content: `Connection error: ${err instanceof Error ? err.message : String(err)}` }],
+					isComplete: true
 				}
-			})
+				set((s) => {
+					const updated = [...(s.messagesMap[sessionId] ?? []), errorMsg]
+					return {
+						messagesMap: { ...s.messagesMap, [sessionId]: updated },
+						messages: s.activeSessionId === sessionId ? updated : s.messages
+					}
+				})
+			}
 		} finally {
+			currentController = null
 			set((s) => ({
 				isStreaming: false,
 				sessions: s.sessions.map((session) => (session.id === sessionId ? { ...session, updatedAt: Date.now() } : session))

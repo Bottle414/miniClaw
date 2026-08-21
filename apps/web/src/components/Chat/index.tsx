@@ -14,7 +14,7 @@ import { ChatInput } from "./ChatInput"
 import styles from "./index.module.css"
 
 export function Chat() {
-  const { messages, isStreaming, sendMessage } = useChatStore()
+  const { messages, isStreaming, sendMessage, stopGeneration } = useChatStore()
   const { inspectorOpen, toggleInspector } = useUIStore()
 
   return (
@@ -30,7 +30,7 @@ export function Chat() {
         )}
       </header>
       <MessageList messages={messages} />
-      <ChatInput onSend={sendMessage} disabled={isStreaming} />
+      <ChatInput onSend={sendMessage} onStop={stopGeneration} disabled={isStreaming} />
     </div>
   )
 }

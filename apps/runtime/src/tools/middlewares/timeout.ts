@@ -26,8 +26,21 @@ export function createTimeoutMiddleware(defaultTimeoutMs = 30000): ToolMiddlewar
 				reject(new ToolTimeoutError(timeoutMs))
 			}, timeoutMs)
 
-			// parent signal 已 abort 时清除 timer
-			originalSignal?.addEventListener("abort", () => clearTimeout(timer), { once: true })
+			// parent signal abort 时立即取消：
+			// - 清 timer：避免后续误触发超时（语义是用户取消，不是超时）
+			// - abort timeoutController：让 mergedSignal 也 abort，下游用 signal 的 executor 会立即抛 AbortError
+			// - reject ToolCancelledError：让没用 signal 的 executor 通过 Promise.race 也能立即返回
+			const onParentAbort = () => {
+				clearTimeout(timer)
+				timeoutController.abort()
+				reject(new ToolCancelledError())
+			}
+			// parent 进入时已 abort：立即触发，避免错过事件
+			if (originalSignal?.aborted) {
+				onParentAbort()
+				return
+			}
+			originalSignal?.addEventListener("abort", onParentAbort, { once: true })
 		})
 
 		try {
@@ -37,6 +50,13 @@ export function createTimeoutMiddleware(defaultTimeoutMs = 30000): ToolMiddlewar
 				return {
 					content: "",
 					error: { code: "TIMEOUT", message: `Execution exceeded ${err.timeoutMs}ms` }
+				}
+			}
+			// 用户主动取消：ToolCancelledError（本中间件 reject）或 AbortError（executor 用 signal 但没自己 catch）
+			if (err instanceof ToolCancelledError || (err instanceof Error && err.name === "AbortError")) {
+				return {
+					content: "",
+					error: { code: "CANCELLED", message: "Tool call cancelled" }
 				}
 			}
 			throw err
@@ -51,5 +71,15 @@ export class ToolTimeoutError extends Error {
 	constructor(public readonly timeoutMs: number) {
 		super(`Tool execution exceeded ${timeoutMs}ms`)
 		this.name = "ToolTimeoutError"
+	}
+}
+
+/**
+ * 工具取消错误（parent signal abort 时抛出，区别于超时）
+ */
+export class ToolCancelledError extends Error {
+	constructor() {
+		super("Tool call cancelled")
+		this.name = "ToolCancelledError"
 	}
 }
