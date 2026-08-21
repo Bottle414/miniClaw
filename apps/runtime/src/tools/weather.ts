@@ -19,7 +19,8 @@ export const weatherGetWeather = {
 	} satisfies LLMTool,
 	metadata: {
 		category: "network",
-		cacheable: true
+		cacheable: true,
+		readonly: true
 	} satisfies ToolMetadata,
 	executor: (async (params: Record<string, unknown>) => {
 		const { city } = params as { city: string }

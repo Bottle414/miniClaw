@@ -108,6 +108,11 @@ export interface ToolMetadata {
 	cacheKeyFn?: (params: Record<string, unknown>) => string
 	/** 是否为危险操作，默认 false */
 	dangerous?: boolean
+	/**
+	 * 是否为只读工具（无副作用，同轮多个 toolCalls 可安全并行执行），默认 false
+	 * 未显式声明为 true 的工具在多工具调用时退化为串行执行，避免未来新增写类工具意外并行
+	 */
+	readonly?: boolean
 }
 
 /**

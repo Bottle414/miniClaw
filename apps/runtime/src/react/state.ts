@@ -4,11 +4,7 @@
  * 提供不可变的 ReAct 状态管理功能
  */
 
-import type {
-	ReActState,
-	ReActStateUpdate,
-	RuntimePhase
-} from "../types/react"
+import type { ReActState, ReActStateUpdate, RuntimePhase } from "../types/react"
 import { isValidRuntimePhase } from "../types/react"
 
 /**
@@ -21,8 +17,6 @@ export function createInitialState(): ReActState {
 		iteration: 0,
 		phase: "thinking",
 		messages: [],
-		actionHistory: [],
-		observationHistory: [],
 		shouldTerminate: false
 	}
 }
@@ -35,10 +29,7 @@ export function createInitialState(): ReActState {
  * @returns 新的状态对象
  * @throws Error 如果更新包含无效的阶段值
  */
-export function updateState(
-	state: ReActState,
-	update: ReActStateUpdate
-): ReActState {
+export function updateState(state: ReActState, update: ReActStateUpdate): ReActState {
 	// 验证阶段更新
 	if (update.phase !== undefined && !isValidRuntimePhase(update.phase)) {
 		throw new Error(`Invalid ReAct phase: ${update.phase}`)
@@ -49,9 +40,6 @@ export function updateState(
 		iteration: update.iteration ?? state.iteration,
 		phase: update.phase ?? state.phase,
 		messages: update.messages ?? state.messages,
-		actionHistory: update.actionHistory ?? state.actionHistory,
-		observationHistory:
-			update.observationHistory ?? state.observationHistory,
 		shouldTerminate: update.shouldTerminate ?? state.shouldTerminate,
 		terminationReason: update.terminationReason ?? state.terminationReason
 	}
@@ -81,24 +69,6 @@ export function getMessages(state: ReActState): ReActState["messages"] {
 }
 
 /**
- * 获取行动历史
- */
-export function getActionHistory(
-	state: ReActState
-): ReActState["actionHistory"] {
-	return state.actionHistory
-}
-
-/**
- * 获取观察历史
- */
-export function getObservationHistory(
-	state: ReActState
-): ReActState["observationHistory"] {
-	return state.observationHistory
-}
-
-/**
  * 检查是否应该终止
  */
 export function shouldTerminate(state: ReActState): boolean {
@@ -108,9 +78,7 @@ export function shouldTerminate(state: ReActState): boolean {
 /**
  * 获取终止原因
  */
-export function getTerminationReason(
-	state: ReActState
-): ReActState["terminationReason"] {
+export function getTerminationReason(state: ReActState): ReActState["terminationReason"] {
 	return state.terminationReason
 }
 
@@ -121,10 +89,7 @@ export function getTerminationReason(
  * @param to 目标阶段
  * @returns 是否为合法转换
  */
-export function isValidPhaseTransition(
-	from: RuntimePhase,
-	to: RuntimePhase
-): boolean {
+export function isValidPhaseTransition(from: RuntimePhase, to: RuntimePhase): boolean {
 	// 定义合法的阶段转换
 	const validTransitions: Record<RuntimePhase, RuntimePhase[]> = {
 		thinking: ["acting"],
@@ -139,36 +104,9 @@ export function isValidPhaseTransition(
 /**
  * 添加消息到状态
  */
-export function addMessage(
-	state: ReActState,
-	message: ReActState["messages"][0]
-): ReActState {
+export function addMessage(state: ReActState, message: ReActState["messages"][0]): ReActState {
 	return updateState(state, {
 		messages: [...state.messages, message]
-	})
-}
-
-/**
- * 添加行动到历史
- */
-export function addAction(
-	state: ReActState,
-	action: ReActState["actionHistory"][0]
-): ReActState {
-	return updateState(state, {
-		actionHistory: [...state.actionHistory, action]
-	})
-}
-
-/**
- * 添加观察到历史
- */
-export function addObservation(
-	state: ReActState,
-	observation: ReActState["observationHistory"][0]
-): ReActState {
-	return updateState(state, {
-		observationHistory: [...state.observationHistory, observation]
 	})
 }
 
@@ -191,10 +129,7 @@ export function setPhase(state: ReActState, phase: RuntimePhase): ReActState {
 /**
  * 标记终止
  */
-export function markTermination(
-	state: ReActState,
-	reason: ReActState["terminationReason"]
-): ReActState {
+export function markTermination(state: ReActState, reason: ReActState["terminationReason"]): ReActState {
 	return updateState(state, {
 		shouldTerminate: true,
 		terminationReason: reason

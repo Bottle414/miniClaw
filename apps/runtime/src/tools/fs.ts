@@ -25,7 +25,8 @@ export const fsReadFile = {
 	metadata: {
 		category: "file",
 		dangerous: true,
-		cacheable: false
+		cacheable: false,
+		readonly: true
 	} satisfies ToolMetadata,
 	executor: (async (params: Record<string, unknown>, { abortSignal }) => {
 		const { path, encoding = "utf-8" } = params as { path: string; encoding?: string }

@@ -19,7 +19,8 @@ export const timeGetCurrent = {
 	} satisfies LLMTool,
 	metadata: {
 		category: "system",
-		cacheable: false
+		cacheable: false,
+		readonly: true
 	} satisfies ToolMetadata,
 	executor: (async (params: Record<string, unknown>) => {
 		const { timezone } = params as { timezone?: string }

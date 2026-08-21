@@ -7,11 +7,11 @@
 
 import type { Provider } from "../types/providers"
 import type { LLMMessage, LLMUserMessage, LLMAssistantMessage, LLMToolMessage } from "../types/llm"
-import type { ReActState, ActionRecord, ObservationRecord } from "../types/react"
+import type { ReActState } from "../types/react"
 import type { RuntimeEvent } from "../types/event"
 import type { Config } from "../types/config"
 import type { ToolHandler } from "../tools"
-import { createInitialState, addMessage, addAction, addObservation, incrementIteration, setPhase, markTermination } from "./state"
+import { createInitialState, addMessage, incrementIteration, setPhase, markTermination } from "./state"
 import { shouldTerminate } from "./terminator"
 import { createStreamMerger } from "../utils/message"
 import { buildContext, createRuntimeMemoryState } from "../memory"
@@ -341,9 +341,69 @@ async function* executeActPhase(
 }
 
 /**
+ * 单个工具调用的处理结果
+ */
+interface ToolCallProcessed {
+	/** 工具消息（写入 state.messages，下一轮 LLM 请求会读取） */
+	toolMessage: LLMToolMessage
+	/** 执行结果内容（用于事件流） */
+	result: string
+	/** 是否成功（用于事件流） */
+	success: boolean
+}
+
+/**
+ * 构造单个工具调用的处理结果
+ */
+function makeProcessed(result: string, success: boolean, toolCallId: string): ToolCallProcessed {
+	return {
+		toolMessage: { role: "tool", toolCallId, content: result },
+		result,
+		success
+	}
+}
+
+/**
+ * 执行单个工具调用（含异常捕获）
+ * 并行和串行路径共用此函数，保证错误处理语义一致
+ */
+async function runToolCall(
+	toolCall: NonNullable<LLMAssistantMessage["toolCalls"]>[number],
+	sessionId: string | undefined,
+	toolHandler: ToolHandler,
+	signal?: AbortSignal
+): Promise<ToolCallProcessed> {
+	const { id, name, arguments: argsStr } = toolCall
+
+	let success = true
+	let result = ""
+
+	try {
+		const params = JSON.parse(argsStr || "{}")
+		const toolResult = await toolHandler.call(name, params, sessionId, signal)
+		if (toolResult.error) {
+			success = false
+			result = `Error: ${toolResult.error.code}: ${toolResult.error.message}`
+		} else {
+			result = toolResult.content
+		}
+	} catch (err) {
+		success = false
+		result = `Error: ${err instanceof Error ? err.message : String(err)}`
+	}
+
+	return makeProcessed(result, success, id)
+}
+
+/**
  * Observe 阶段处理器
  *
- * 执行工具并记录观察结果
+ * 执行工具并把结果写入 state.messages 供下一轮 LLM 使用
+ *
+ * 并行策略：
+ * - 同轮所有 toolCalls 对应的工具 metadata.readonly 均为 true 时，使用 Promise.allSettled 并行执行
+ * - 任一工具未声明 readonly（默认 false）则退化为串行，避免写类工具意外并行引发竞态
+ * - 并行模式下事件发出顺序保持稳定：先按原顺序 yield 所有 tool-execute，再按原顺序 yield tool-result
  */
 async function executeObservePhase(
 	state: ReActState,
@@ -358,78 +418,59 @@ async function executeObservePhase(
 	let newState = setPhase(state, "observing")
 	events.push({ type: "phase-change", phase: "observing", iteration: state.iteration })
 
-	// 执行工具并收集观察结果
 	const toolMessages: LLMToolMessage[] = []
+	const processedList: ToolCallProcessed[] = []
 
-	for (const toolCall of toolCalls) {
-		const { id, name, arguments: argsStr } = toolCall
+	// 判断是否可全部并行：所有 toolCalls 对应工具都声明 readonly
+	const allReadonly = toolHandler !== undefined && toolCalls.every((tc) => toolHandler.get(tc.name)?.metadata?.readonly === true)
 
-		// 添加工具执行开始事件
-		events.push({ type: "tool-execute", toolCallId: id, toolName: name })
-
-		// 创建行动记录
-		const actionRecord: ActionRecord = {
-			toolCallId: id,
-			toolName: name,
-			parameters: argsStr,
-			timestamp: Date.now()
+	if (allReadonly && toolCalls.length > 1) {
+		// 并行模式：先按原顺序 yield 所有 execute 事件
+		for (const { id, name } of toolCalls) {
+			events.push({ type: "tool-execute", toolCallId: id, toolName: name })
 		}
 
-		// 执行工具
-		let success = true
-		let result = ""
-		let error: string | undefined
+		// Promise.allSettled 并行执行：单个工具异常不会影响其他工具
+		const settled = await Promise.allSettled(toolCalls.map((tc) => runToolCall(tc, sessionId, toolHandler!, signal)))
 
-		try {
-			const params = JSON.parse(argsStr || "{}")
-			const toolResult = await toolHandler!.call(name, params, sessionId, signal)
-			if (toolResult.error) {
-				success = false
-				error = `${toolResult.error.code}: ${toolResult.error.message}`
-				result = `Error: ${error}`
-			} else {
-				result = toolResult.content
-			}
-		} catch (err) {
-			success = false
-			error = err instanceof Error ? err.message : String(err)
-			result = `Error: ${error}`
+		// 按原顺序处理结果，保证事件顺序与 toolCallId 一一对应
+		for (let i = 0; i < toolCalls.length; i++) {
+			const tc = toolCalls[i]
+			const r = settled[i]
+			// rejected（中间件链路未捕获异常）转成与 try/catch 一致的错误结果
+			const processed: ToolCallProcessed = r.status === "fulfilled" ? r.value : makeProcessed(`Error: ${String(r.reason)}`, false, tc.id)
+
+			processedList.push(processed)
+			events.push({
+				type: "tool-result",
+				toolCallId: tc.id,
+				toolName: tc.name,
+				result: processed.result,
+				success: processed.success
+			})
 		}
+	} else {
+		// 串行模式（保留原有 for...of 行为）
+		for (const toolCall of toolCalls) {
+			events.push({ type: "tool-execute", toolCallId: toolCall.id, toolName: toolCall.name })
 
-		// 添加工具执行结果事件
-		events.push({ type: "tool-result", toolCallId: id, toolName: name, result, success })
+			const processed = await runToolCall(toolCall, sessionId, toolHandler!, signal)
+			processedList.push(processed)
 
-		// 更新行动记录
-		actionRecord.result = result
-		actionRecord.success = success
-		actionRecord.error = error
-
-		// 添加行动到历史
-		newState = addAction(newState, actionRecord)
-
-		// 创建观察记录
-		const observationRecord: ObservationRecord = {
-			toolCallId: id,
-			toolName: name,
-			result,
-			success,
-			error,
-			timestamp: Date.now()
+			events.push({
+				type: "tool-result",
+				toolCallId: toolCall.id,
+				toolName: toolCall.name,
+				result: processed.result,
+				success: processed.success
+			})
 		}
-
-		// 添加观察到历史
-		newState = addObservation(newState, observationRecord)
-
-		// 创建工具消息
-		const toolMessage: LLMToolMessage = {
-			role: "tool",
-			toolCallId: id,
-			content: result
-		}
-		toolMessages.push(toolMessage)
 	}
 
-	// 添加工具消息到历史
+	// 按原顺序追加 toolMessage 到 state.messages
+	for (const { toolMessage } of processedList) {
+		toolMessages.push(toolMessage)
+	}
 	for (const msg of toolMessages) {
 		newState = addMessage(newState, msg)
 	}

@@ -19,7 +19,8 @@ export const mathCalculate = {
 	} satisfies LLMTool,
 	metadata: {
 		category: "compute",
-		cacheable: true
+		cacheable: true,
+		readonly: true
 	} satisfies ToolMetadata,
 	executor: (async (params: Record<string, unknown>) => {
 		const { expression } = params as { expression: string }

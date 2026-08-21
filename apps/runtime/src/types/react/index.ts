@@ -10,11 +10,5 @@ export * from "./phase"
 // ReAct 状态
 export * from "./state"
 
-// 行动记录
-export * from "./action"
-
-// 观察记录
-export * from "./observation"
-
 // 终止原因
 export * from "./termination"

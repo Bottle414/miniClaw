@@ -6,8 +6,6 @@
 
 import type { LLMMessage } from "../llm/message"
 import type { RuntimePhase } from "./phase"
-import type { ActionHistory } from "./action"
-import type { ObservationHistory } from "./observation"
 import type { TerminationReason } from "./termination"
 
 /**
@@ -24,12 +22,6 @@ export interface ReActState {
 
 	/** 消息历史 */
 	messages: LLMMessage[]
-
-	/** 行动历史 */
-	actionHistory: ActionHistory
-
-	/** 观察历史 */
-	observationHistory: ObservationHistory
 
 	/** 是否应该终止 */
 	shouldTerminate: boolean

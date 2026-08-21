@@ -351,8 +351,6 @@ ReAct 循环保持完整状态消息：
 ```ts
 ReActState {
   messages: LLMMessage[]
-  actionHistory: ActionRecord[]
-  observationHistory: ObservationRecord[]
 }
 ```
 
@@ -384,35 +382,34 @@ interface ReActLoopResult {
 
 - Provider 看到的是压缩后的 `contextMessages`。
 - ReAct state 中仍保留完整 `messages`。
-- 工具观察和行动记录不会因为上下文压缩而丢失。
 
 ## 测试重点
 
 Memory System 的测试应覆盖：
 
 1. **canonical messages 不变**
-   - Context Builder 执行保留、丢弃、摘要、注入时，原始 `messages` 不被修改。
+    - Context Builder 执行保留、丢弃、摘要、注入时，原始 `messages` 不被修改。
 
 2. **上下文构建顺序稳定**
-   - memory/system context、summary message、fact message、recent messages 的相对顺序符合预期。
+    - memory/system context、summary message、fact message、recent messages 的相对顺序符合预期。
 
 3. **摘要结构化解析**
-   - 合法 JSON 能解析为 `SummaryResult`。
-   - 非法 JSON 或非法 `Fact.category` 会产生明确错误。
+    - 合法 JSON 能解析为 `SummaryResult`。
+    - 非法 JSON 或非法 `Fact.category` 会产生明确错误。
 
 4. **摘要 prompt 隔离**
-   - 内部摘要请求包含 `SUMMARY_GENERATOR_SYSTEM_PROMPT`。
-   - 最终任务的 `contextMessages` 不包含摘要生成器 prompt。
+    - 内部摘要请求包含 `SUMMARY_GENERATOR_SYSTEM_PROMPT`。
+    - 最终任务的 `contextMessages` 不包含摘要生成器 prompt。
 
 5. **ReAct 状态完整性**
-   - ReAct Act 阶段发送压缩后的 `contextMessages`。
-   - `state.messages` 仍保留完整历史。
+    - ReAct Act 阶段发送压缩后的 `contextMessages`。
+    - `state.messages` 仍保留完整历史。
 
 6. **Session 持久化**
-   - FileSystemMemoryStore 的 save/load/delete/exists 操作正确。
-   - SessionManager 的 create/load/save/delete 生命周期正确，包括外部 ID 和 name。
-   - Session 恢复：messages 还原到运行时数组，summary/facts 注入到 session memory。
-   - 缺失文件时（如只有 metadata.json）load 优雅降级。
+    - FileSystemMemoryStore 的 save/load/delete/exists 操作正确。
+    - SessionManager 的 create/load/save/delete 生命周期正确，包括外部 ID 和 name。
+    - Session 恢复：messages 还原到运行时数组，summary/facts 注入到 session memory。
+    - 缺失文件时（如只有 metadata.json）load 优雅降级。
 
 ## 后续演进方向
 
